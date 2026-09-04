@@ -46,7 +46,6 @@ export const SomaticSelector: React.FC<Props> = ({
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionTitle}>3. Body Sensations (Somatic)</Text>
-        <Text style={styles.subtext}>Tap all that apply</Text>
       </View>
 
       <View style={styles.chipsContainer}>
@@ -118,10 +117,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: '#D4D4D8',
-  },
-  subtext: {
-    fontSize: 10,
-    color: '#71717A',
   },
   chipsContainer: {
     flexDirection: 'row',
