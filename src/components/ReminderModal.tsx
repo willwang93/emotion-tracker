@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -7,13 +7,175 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-  TextInput,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { ReminderSetting } from '../types';
-import { isNotificationsSupported } from '../services/notifications';
+
+const ITEM_HEIGHT = 44;
+const VISIBLE_ITEMS = 3;
+const WHEEL_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
+const HOURS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+const PERIODS = ['AM', 'PM'];
+
+function parse24to12(timeStr: string) {
+  const [hStr, mStr] = (timeStr || '09:00').split(':');
+  const h = parseInt(hStr, 10) || 0;
+  const m = parseInt(mStr, 10) || 0;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return {
+    hour: String(h12).padStart(2, '0'),
+    minute: String(m).padStart(2, '0'),
+    period,
+  };
+}
+
+function format12to24(hour12Str: string, minuteStr: string, period: string) {
+  const h12 = parseInt(hour12Str, 10);
+  const m = parseInt(minuteStr, 10);
+  let h24 = h12;
+  if (period === 'PM') {
+    h24 = h12 === 12 ? 12 : h12 + 12;
+  } else {
+    h24 = h12 === 12 ? 0 : h12;
+  }
+  return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+interface WheelColumnProps {
+  items: string[];
+  selectedValue: string;
+  onValueChange: (val: string) => void;
+  flex?: number;
+}
+
+const WheelColumn: React.FC<WheelColumnProps> = ({
+  items,
+  selectedValue,
+  onValueChange,
+  flex = 1,
+}) => {
+  const scrollRef = useRef<ScrollView>(null);
+  const selectedIndex = Math.max(0, items.indexOf(selectedValue));
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({
+      y: selectedIndex * ITEM_HEIGHT,
+      animated: false,
+    });
+  }, []);
+
+  const handleMomentumScrollEnd = (e: any) => {
+    const offsetY = e.nativeEvent.contentOffset.y;
+    const index = Math.max(0, Math.min(items.length - 1, Math.round(offsetY / ITEM_HEIGHT)));
+    const val = items[index];
+    if (val !== selectedValue) {
+      Haptics.selectionAsync();
+      onValueChange(val);
+    }
+  };
+
+  return (
+    <View style={[styles.wheelColumn, { flex }]}>
+      <ScrollView
+        ref={scrollRef}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        contentContainerStyle={styles.wheelContent}
+      >
+        {items.map((item, idx) => {
+          const isSelected = item === selectedValue;
+          return (
+            <TouchableOpacity
+              key={item}
+              style={styles.wheelItem}
+              onPress={() => {
+                Haptics.selectionAsync();
+                scrollRef.current?.scrollTo({ y: idx * ITEM_HEIGHT, animated: true });
+                onValueChange(item);
+              }}
+            >
+              <Text style={[styles.wheelItemText, isSelected && styles.wheelItemTextSelected]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+};
+
+interface SlotMachinePickerProps {
+  timeStr: string;
+  onChangeTime: (newTimeStr: string) => void;
+  onDone: () => void;
+}
+
+const SlotMachinePicker: React.FC<SlotMachinePickerProps> = ({
+  timeStr,
+  onChangeTime,
+  onDone,
+}) => {
+  const parsed = parse24to12(timeStr);
+  const [hour, setHour] = useState(parsed.hour);
+  const [minute, setMinute] = useState(parsed.minute);
+  const [period, setPeriod] = useState(parsed.period);
+
+  const updateHour = (newHour: string) => {
+    setHour(newHour);
+    onChangeTime(format12to24(newHour, minute, period));
+  };
+
+  const updateMinute = (newMin: string) => {
+    setMinute(newMin);
+    onChangeTime(format12to24(hour, newMin, period));
+  };
+
+  const updatePeriod = (newPeriod: string) => {
+    setPeriod(newPeriod);
+    onChangeTime(format12to24(hour, minute, newPeriod));
+  };
+
+  return (
+    <View style={styles.slotMachineCard}>
+      <View style={styles.slotHeaderRow}>
+        <Text style={styles.slotHeaderTitle}>Scroll Hour & Minute</Text>
+        <TouchableOpacity onPress={onDone} style={styles.slotDoneBtn}>
+          <Text style={styles.slotDoneBtnText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.slotMachineWrapper}>
+        {/* Middle highlight band */}
+        <View style={styles.slotHighlightBand} pointerEvents="none" />
+
+        <WheelColumn
+          items={HOURS}
+          selectedValue={hour}
+          onValueChange={updateHour}
+        />
+        <Text style={styles.colonSeparator}>:</Text>
+        <WheelColumn
+          items={MINUTES}
+          selectedValue={minute}
+          onValueChange={updateMinute}
+        />
+        <WheelColumn
+          items={PERIODS}
+          selectedValue={period}
+          onValueChange={updatePeriod}
+        />
+      </View>
+    </View>
+  );
+};
 
 interface Props {
   visible: boolean;
@@ -30,36 +192,22 @@ export const ReminderModal: React.FC<Props> = ({
 }) => {
   const [enabled, setEnabled] = useState(setting.enabled);
   const [times, setTimes] = useState<string[]>(setting.times);
-  const [newTimeInput, setNewTimeInput] = useState('');
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const handleToggleEnabled = (val: boolean) => {
     Haptics.selectionAsync();
     setEnabled(val);
   };
 
-  const handleRemoveTime = (index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const updated = times.filter((_, i) => i !== index);
-    setTimes(updated);
+  const handleToggleEdit = (index: number) => {
+    Haptics.selectionAsync();
+    setEditingIndex((prev) => (prev === index ? null : index));
   };
 
-  const handleAddTime = () => {
-    const trimmed = newTimeInput.trim();
-    // Validate HH:MM
-    const match = trimmed.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/);
-    if (!match) {
-      Alert.alert('Invalid Time', 'Please enter a valid time in 24-hour HH:MM format (e.g., 08:30 or 19:45).');
-      return;
-    }
-
-    if (times.includes(trimmed)) {
-      Alert.alert('Already Exists', 'This reminder time is already configured.');
-      return;
-    }
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setTimes([...times, trimmed].sort());
-    setNewTimeInput('');
+  const handleUpdateTimeAtIndex = (index: number, newTime: string) => {
+    const updated = [...times];
+    updated[index] = newTime;
+    setTimes(updated);
   };
 
   const handleSave = () => {
@@ -116,55 +264,42 @@ export const ReminderModal: React.FC<Props> = ({
 
           {/* Schedule List */}
           <View style={styles.scheduleSection}>
-            <Text style={styles.sectionHeading}>Scheduled Reminder Times</Text>
+            <Text style={styles.sectionHeading}>Tap Any Time Card to Edit</Text>
 
-            {times.map((t, idx) => (
-              <View key={t} style={styles.timeRow}>
-                <View>
-                  <Text style={styles.timeLabel}>{getTimeLabel(t)}</Text>
-                  <Text style={styles.militaryTime}>({t})</Text>
+            {times.map((t, idx) => {
+              const isEditing = editingIndex === idx;
+              return (
+                <View key={`${idx}-${t}`} style={styles.timeCardContainer}>
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={() => handleToggleEdit(idx)}
+                    style={[
+                      styles.timeRow,
+                      isEditing && styles.timeRowActive,
+                    ]}
+                  >
+                    <View>
+                      <Text style={[styles.timeLabel, isEditing && styles.timeLabelActive]}>
+                        {getTimeLabel(t)}
+                      </Text>
+                      <Text style={styles.militaryTime}>({t})</Text>
+                    </View>
+                    <Text style={styles.editHintText}>
+                      {isEditing ? 'Tap to close ▴' : 'Edit ▾'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Slot Machine Wheel Picker for this item */}
+                  {isEditing && (
+                    <SlotMachinePicker
+                      timeStr={t}
+                      onChangeTime={(newTime) => handleUpdateTimeAtIndex(idx, newTime)}
+                      onDone={() => setEditingIndex(null)}
+                    />
+                  )}
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleRemoveTime(idx)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={styles.deleteBtn}
-                >
-                  <Text style={styles.deleteBtnText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-
-            {/* Add New Time Input */}
-            <View style={styles.addTimeRow}>
-              <TextInput
-                placeholder="HH:MM (e.g. 15:30)"
-                placeholderTextColor="#71717A"
-                value={newTimeInput}
-                onChangeText={setNewTimeInput}
-                style={styles.timeInput}
-                keyboardType="numbers-and-punctuation"
-              />
-              <TouchableOpacity onPress={handleAddTime} style={styles.addTimeBtn}>
-                <Text style={styles.addTimeBtnText}>+ Add Time</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {!isNotificationsSupported() && (
-            <View style={styles.expoGoNotice}>
-              <Text style={styles.expoGoNoticeTitle}>ℹ️ Notice for Expo Go on Android</Text>
-              <Text style={styles.expoGoNoticeText}>
-                Expo removed background notification services from Expo Go on Android starting in SDK 53. Your schedule is saved in SQLite and will trigger normally when running as a standalone or development APK.
-              </Text>
-            </View>
-          )}
-
-          {/* Privacy & Storage Callout */}
-          <View style={styles.privacyCard}>
-            <Text style={styles.privacyHeading}>🔒 100% Local & Private</Text>
-            <Text style={styles.privacyText}>
-              All notification triggers run natively on your Google Pixel 5 using local Android alarms. No data or schedules are transmitted to external servers.
-            </Text>
+              );
+            })}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -244,6 +379,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: '#A1A1AA',
+    marginBottom: 10,
+  },
+  timeCardContainer: {
     marginBottom: 8,
   },
   timeRow: {
@@ -255,94 +393,110 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#27272A',
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 8,
+    paddingVertical: 12,
+  },
+  timeRowActive: {
+    borderColor: '#EF4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
   },
   timeLabel: {
     color: '#F4F4F5',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  timeLabelActive: {
+    color: '#F87171',
   },
   militaryTime: {
     color: '#71717A',
-    fontSize: 10,
-    fontFamily: 'monospace',
-  },
-  deleteBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  deleteBtnText: {
-    color: '#F87171',
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'monospace',
+    marginTop: 2,
   },
-  addTimeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  timeInput: {
-    flex: 1,
-    height: 38,
-    backgroundColor: '#18181B',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    paddingHorizontal: 12,
-    color: '#F4F4F5',
+  editHintText: {
     fontSize: 12,
+    fontWeight: '600',
+    color: '#A1A1AA',
   },
-  addTimeBtn: {
-    height: 38,
-    paddingHorizontal: 14,
-    backgroundColor: '#27272A',
-    borderRadius: 10,
+  slotMachineCard: {
+    backgroundColor: '#111113',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#27272A',
+    padding: 12,
+  },
+  slotHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  slotHeaderTitle: {
+    fontSize: 11,
+    color: '#A1A1AA',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  slotDoneBtn: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  slotDoneBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  slotMachineWrapper: {
+    height: WHEEL_HEIGHT,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  addTimeBtnText: {
-    color: '#F4F4F5',
-    fontSize: 12,
-    fontWeight: '700',
+  slotHighlightBand: {
+    position: 'absolute',
+    top: ITEM_HEIGHT,
+    left: 0,
+    right: 0,
+    height: ITEM_HEIGHT,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  privacyCard: {
-    backgroundColor: 'rgba(24, 24, 27, 0.5)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    padding: 12,
-  },
-  privacyHeading: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#A1A1AA',
-    marginBottom: 4,
-  },
-  privacyText: {
-    fontSize: 10,
-    lineHeight: 15,
-    color: '#71717A',
-  },
-  expoGoNotice: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  expoGoNoticeTitle: {
-    fontSize: 11,
+  colonSeparator: {
+    fontSize: 22,
     fontWeight: '800',
-    color: '#FBBF24',
-    marginBottom: 4,
+    color: '#A1A1AA',
+    marginHorizontal: 8,
   },
-  expoGoNoticeText: {
-    fontSize: 10,
-    lineHeight: 15,
-    color: '#FDE68A',
+  wheelColumn: {
+    height: WHEEL_HEIGHT,
+  },
+  wheelContent: {
+    paddingVertical: ITEM_HEIGHT,
+    alignItems: 'center',
+  },
+  wheelItem: {
+    height: ITEM_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  wheelItemText: {
+    fontSize: 16,
+    color: '#71717A',
+    fontWeight: '600',
+  },
+  wheelItemTextSelected: {
+    fontSize: 20,
+    color: '#F4F4F5',
+    fontWeight: '800',
   },
 });

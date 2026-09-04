@@ -206,12 +206,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
           >
             {/* 1. Yale Mood Meter Quadrant */}
             <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>1. Quadrant</Text>
-                <Text style={[styles.quadrantIndicator, { color: meta.textColor }]}>
-                  {meta.label}
-                </Text>
-              </View>
+              <Text style={styles.sectionTitle}>1. Quadrant</Text>
               <QuadrantSelector selectedQuadrant={quadrant} onSelect={handleQuadrantChange} />
             </View>
 
@@ -314,11 +309,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
 
               {sttStatusMessage ? (
                 <Text style={styles.sttStatusText}>{sttStatusMessage}</Text>
-              ) : (
-                <Text style={styles.privacyNote}>
-                  🔒 Voice input is converted straight to text on-device. No audio recordings are saved.
-                </Text>
-              )}
+              ) : null}
             </View>
           </ScrollView>
 

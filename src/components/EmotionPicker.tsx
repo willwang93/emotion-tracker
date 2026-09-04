@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { QuadrantType, EmotionItem } from '../types';
 import { EMOTIONS, QUADRANTS } from '../constants/moodMeter';
@@ -19,16 +19,8 @@ export const EmotionPicker: React.FC<Props> = ({
   intensity,
   onChangeIntensity,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const emotionsList = EMOTIONS[quadrant] || [];
   const meta = QUADRANTS[quadrant];
-
-  // Filter based on search query if present
-  const filteredEmotions = searchQuery.trim()
-    ? emotionsList.filter((e) => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : emotionsList;
 
   // Selected item object to extract definition
   const currentEmotionItem =
@@ -49,40 +41,16 @@ export const EmotionPicker: React.FC<Props> = ({
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionTitle}>2. Name The Feeling</Text>
-        <TouchableOpacity
-          onPress={() => setIsExpanded(!isExpanded)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={[styles.expandToggleText, { color: meta.textColor }]}>
-            {isExpanded ? 'Collapse ▴' : `Show all ${emotionsList.length} ▾`}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Search */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Filter emotions..."
-          placeholderTextColor="#71717A"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          style={styles.searchInput}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-            <Text style={styles.clearSearchText}>✕</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Emotion Chips */}
-      <View style={[styles.chipsWrapper, !isExpanded && !searchQuery && styles.chipsWrapperCollapsed]}>
+      <View style={styles.chipsWrapper}>
         <ScrollView
           nestedScrollEnabled
           contentContainerStyle={styles.chipsContainer}
           showsVerticalScrollIndicator={true}
         >
-          {filteredEmotions.map((item) => {
+          {emotionsList.map((item) => {
             const isSelected = selectedEmotion.toLowerCase() === item.name.toLowerCase();
             return (
               <TouchableOpacity
@@ -124,11 +92,6 @@ export const EmotionPicker: React.FC<Props> = ({
             <View style={styles.wordAndBadge}>
               <Text style={styles.definitionLabel}>Definition:</Text>
               <Text style={styles.definitionWord}>{currentEmotionItem.name}</Text>
-            </View>
-            <View style={[styles.quadrantPill, { backgroundColor: meta.badgeBg }]}>
-              <Text style={[styles.quadrantPillText, { color: meta.textColor }]}>
-                {meta.label}
-              </Text>
             </View>
           </View>
           <Text style={styles.definitionBody}>{currentEmotionItem.definition}</Text>
@@ -189,43 +152,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     color: '#D4D4D8',
   },
-  expandToggleText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#18181B',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    paddingHorizontal: 10,
-    marginBottom: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: 34,
-    color: '#F4F4F5',
-    fontSize: 12,
-  },
-  clearSearchBtn: {
-    padding: 4,
-  },
-  clearSearchText: {
-    color: '#71717A',
-    fontSize: 12,
-  },
   chipsWrapper: {
-    maxHeight: 180,
+    maxHeight: 280,
     backgroundColor: 'rgba(24, 24, 27, 0.6)',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#27272A',
-    padding: 6,
-  },
-  chipsWrapperCollapsed: {
-    maxHeight: 110,
+    padding: 8,
   },
   chipsContainer: {
     flexDirection: 'row',
