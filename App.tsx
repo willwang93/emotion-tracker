@@ -3,14 +3,12 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  StatusBar as RNStatusBar,
-  Platform,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { CheckIn, ReminderSetting } from './src/types';
@@ -113,8 +111,9 @@ export default function App() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="light" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
 
       {/* Main Top Header */}
       <View style={styles.header}>
@@ -242,7 +241,8 @@ export default function App() {
         setting={reminderSetting}
         onSaveSettings={handleSaveSettings}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -250,7 +250,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#09090B',
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',

@@ -6,11 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Switch,
-  SafeAreaView,
   ScrollView,
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { ReminderSetting } from '../types';
 import { isNotificationsSupported } from '../services/notifications';

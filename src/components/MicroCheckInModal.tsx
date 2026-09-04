@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { CheckIn, QuadrantType } from '../types';
 import { QUADRANTS, EMOTIONS } from '../constants/moodMeter';
