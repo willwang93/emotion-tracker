@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +20,7 @@ import { QuadrantSelector } from './QuadrantSelector';
 import { EmotionPicker } from './EmotionPicker';
 import { SomaticSelector } from './SomaticSelector';
 import { ContextSelector } from './ContextSelector';
-import { startListening, stopListening, isListening } from '../services/speech';
+import { startListening, stopListening, isListening, isSpeechModuleInstalled } from '../services/speech';
 
 interface Props {
   visible: boolean;
@@ -53,6 +54,15 @@ export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave })
 
   const toggleSpeechRecognition = async (target: 'trigger' | 'urge') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (!isSpeechModuleInstalled()) {
+      Alert.alert(
+        'Voice Dictation',
+        'In Expo Go, native third-party modules are unavailable. You can dictate instantly by tapping the microphone key 🎙️ directly on your keyboard (Gboard)!\n\n(Standalone development builds support direct in-app voice transcription.)',
+        [{ text: 'Got it' }]
+      );
+      return;
+    }
 
     if (isRecordingSTT) {
       stopListening();

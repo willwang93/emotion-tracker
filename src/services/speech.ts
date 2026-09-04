@@ -1,3 +1,5 @@
+import { isRunningInExpoGo, requireOptionalNativeModule } from 'expo';
+
 export interface SpeechCallbacks {
   onStart?: () => void;
   onResult?: (transcript: string, isFinal: boolean) => void;
@@ -9,7 +11,20 @@ let SpeechModule: any = null;
 
 function getModule(): any {
   if (SpeechModule !== null) return SpeechModule;
+
+  // Third-party native modules like expo-speech-recognition are not bundled in Expo Go.
+  // Checking isRunningInExpoGo() prevents uncaught native module errors.
+  if (isRunningInExpoGo()) {
+    SpeechModule = false;
+    return null;
+  }
+
   try {
+    const nativeModule = requireOptionalNativeModule('ExpoSpeechRecognition');
+    if (!nativeModule) {
+      SpeechModule = false;
+      return null;
+    }
     const mod = require('expo-speech-recognition');
     SpeechModule = mod.ExpoSpeechRecognitionModule || null;
   } catch (err) {
