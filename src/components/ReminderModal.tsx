@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ReminderSetting } from '../types';
+import { isNotificationsSupported } from '../services/notifications';
 
 interface Props {
   visible: boolean;
@@ -148,6 +149,15 @@ export const ReminderModal: React.FC<Props> = ({
               </TouchableOpacity>
             </View>
           </View>
+
+          {!isNotificationsSupported() && (
+            <View style={styles.expoGoNotice}>
+              <Text style={styles.expoGoNoticeTitle}>ℹ️ Notice for Expo Go on Android</Text>
+              <Text style={styles.expoGoNoticeText}>
+                Expo removed background notification services from Expo Go on Android starting in SDK 53. Your schedule is saved in SQLite and will trigger normally when running as a standalone or development APK.
+              </Text>
+            </View>
+          )}
 
           {/* Privacy & Storage Callout */}
           <View style={styles.privacyCard}>
@@ -315,5 +325,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 15,
     color: '#71717A',
+  },
+  expoGoNotice: {
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  expoGoNoticeTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FBBF24',
+    marginBottom: 4,
+  },
+  expoGoNoticeText: {
+    fontSize: 10,
+    lineHeight: 15,
+    color: '#FDE68A',
   },
 });

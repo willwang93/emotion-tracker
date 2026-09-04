@@ -1,24 +1,39 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { isRunningInExpoGo } from 'expo';
 import { ReminderSetting } from '../types';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+let NotificationsModule: typeof import('expo-notifications') | null = null;
+
+const isUnsupportedExpoGoAndroid = isRunningInExpoGo() && Platform.OS === 'android';
+
+if (!isUnsupportedExpoGoAndroid && Platform.OS !== 'web') {
+  try {
+    NotificationsModule = require('expo-notifications');
+    NotificationsModule?.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch (err) {
+    console.warn('Could not initialize notifications module:', err);
+  }
+}
+
+export function isNotificationsSupported(): boolean {
+  return NotificationsModule !== null && !isUnsupportedExpoGoAndroid && Platform.OS !== 'web';
+}
 
 export async function requestNotificationPermissions(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  if (!NotificationsModule) return false;
   try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    const { status: existingStatus } = await NotificationsModule.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
+      const { status } = await NotificationsModule.requestPermissionsAsync();
       finalStatus = status;
     }
     return finalStatus === 'granted';
@@ -29,11 +44,12 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 export async function scheduleReminders(setting: ReminderSetting): Promise<void> {
-  if (Platform.OS === 'web') return;
+  if (!NotificationsModule) {
+    return;
+  }
 
   try {
-    // Cancel all existing scheduled notifications
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await NotificationsModule.cancelAllScheduledNotificationsAsync();
 
     if (!setting.enabled || setting.times.length === 0) {
       return;
@@ -61,14 +77,14 @@ export async function scheduleReminders(setting: ReminderSetting): Promise<void>
 
       const message = reminderMessages[i % reminderMessages.length];
 
-      await Notifications.scheduleNotificationAsync({
+      await NotificationsModule.scheduleNotificationAsync({
         content: {
           title: message.title,
           body: message.body,
           sound: true,
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          type: NotificationsModule.SchedulableTriggerInputTypes.DAILY,
           hour,
           minute,
         },
