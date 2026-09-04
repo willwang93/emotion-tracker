@@ -7,10 +7,16 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { ReminderSetting } from '../types';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = -85;
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 3;
@@ -43,6 +49,15 @@ function format12to24(hour12Str: string, minuteStr: string, period: string) {
     h24 = h12 === 12 ? 0 : h12;
   }
   return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function getTimeLabel(timeStr: string) {
+  const [hStr, mStr] = (timeStr || '09:00').split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  const date = new Date();
+  date.setHours(h, m, 0);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 interface WheelColumnProps {
@@ -177,6 +192,110 @@ const SlotMachinePicker: React.FC<SlotMachinePickerProps> = ({
   );
 };
 
+interface SwipeableTimeCardProps {
+  time: string;
+  isEditing: boolean;
+  onPress: () => void;
+  onDelete: () => void;
+}
+
+const SwipeableTimeCard: React.FC<SwipeableTimeCardProps> = ({
+  time,
+  isEditing,
+  onPress,
+  onDelete,
+}) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isSwiping = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        return isHorizontal && Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderGrant: () => {
+        isSwiping.current = true;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx < 0) {
+          translateX.setValue(gestureState.dx);
+        } else {
+          translateX.setValue(0);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < SWIPE_THRESHOLD) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          Animated.timing(translateX, {
+            toValue: -SCREEN_WIDTH,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onDelete();
+          });
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        }
+        setTimeout(() => {
+          isSwiping.current = false;
+        }, 120);
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+        isSwiping.current = false;
+      },
+    })
+  ).current;
+
+  const handlePress = () => {
+    if (!isSwiping.current) {
+      onPress();
+    }
+  };
+
+  const deleteOpacity = translateX.interpolate({
+    inputRange: [-60, -10, 0],
+    outputRange: [1, 0.2, 0],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <View style={styles.swipeWrapper}>
+      <Animated.View style={[styles.deleteBackground, { opacity: deleteOpacity }]}>
+        <Text style={styles.deleteBackgroundText}>🗑️ Delete</Text>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.timeRow,
+          isEditing && styles.timeRowActive,
+          { transform: [{ translateX }] },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={handlePress}
+          style={styles.timeRowInner}
+        >
+          <Text style={[styles.timeLabel, isEditing && styles.timeLabelActive]}>
+            {getTimeLabel(time)}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+};
+
 interface Props {
   visible: boolean;
   onClose: () => void;
@@ -204,6 +323,15 @@ export const ReminderModal: React.FC<Props> = ({
     setEditingIndex((prev) => (prev === index ? null : index));
   };
 
+  const handleDeleteTime = (index: number) => {
+    setTimes((prev) => prev.filter((_, i) => i !== index));
+    if (editingIndex === index) {
+      setEditingIndex(null);
+    } else if (editingIndex !== null && editingIndex > index) {
+      setEditingIndex((prev) => (prev !== null ? prev - 1 : null));
+    }
+  };
+
   const handleUpdateTimeAtIndex = (index: number, newTime: string) => {
     const updated = [...times];
     updated[index] = newTime;
@@ -218,15 +346,6 @@ export const ReminderModal: React.FC<Props> = ({
       times,
     });
     onClose();
-  };
-
-  const getTimeLabel = (timeStr: string) => {
-    const [hStr, mStr] = timeStr.split(':');
-    const h = parseInt(hStr, 10);
-    const m = parseInt(mStr, 10);
-    const date = new Date();
-    date.setHours(h, m, 0);
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   };
 
   return (
@@ -266,34 +385,34 @@ export const ReminderModal: React.FC<Props> = ({
           <View style={styles.scheduleSection}>
             <Text style={styles.sectionHeading}>Reminder times</Text>
 
-            {times.map((t, idx) => {
-              const isEditing = editingIndex === idx;
-              return (
-                <View key={`${idx}-${t}`} style={styles.timeCardContainer}>
-                  <TouchableOpacity
-                    activeOpacity={0.75}
-                    onPress={() => handleToggleEdit(idx)}
-                    style={[
-                      styles.timeRow,
-                      isEditing && styles.timeRowActive,
-                    ]}
-                  >
-                    <Text style={[styles.timeLabel, isEditing && styles.timeLabelActive]}>
-                      {getTimeLabel(t)}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Slot Machine Wheel Picker for this item */}
-                  {isEditing && (
-                    <SlotMachinePicker
-                      timeStr={t}
-                      onChangeTime={(newTime) => handleUpdateTimeAtIndex(idx, newTime)}
-                      onDone={() => setEditingIndex(null)}
+            {times.length === 0 ? (
+              <View style={styles.emptyTimesContainer}>
+                <Text style={styles.emptyTimesText}>No reminder times scheduled</Text>
+              </View>
+            ) : (
+              times.map((t, idx) => {
+                const isEditing = editingIndex === idx;
+                return (
+                  <View key={`${idx}-${t}`} style={styles.timeCardContainer}>
+                    <SwipeableTimeCard
+                      time={t}
+                      isEditing={isEditing}
+                      onPress={() => handleToggleEdit(idx)}
+                      onDelete={() => handleDeleteTime(idx)}
                     />
-                  )}
-                </View>
-              );
-            })}
+
+                    {/* Slot Machine Wheel Picker for this item */}
+                    {isEditing && (
+                      <SlotMachinePicker
+                        timeStr={t}
+                        onChangeTime={(newTime) => handleUpdateTimeAtIndex(idx, newTime)}
+                        onDone={() => setEditingIndex(null)}
+                      />
+                    )}
+                  </View>
+                );
+              })
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -378,20 +497,42 @@ const styles = StyleSheet.create({
   timeCardContainer: {
     marginBottom: 8,
   },
-  timeRow: {
+  swipeWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  deleteBackground: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#DC2626',
+    borderRadius: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingRight: 18,
+  },
+  deleteBackgroundText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+    letterSpacing: 0.5,
+  },
+  timeRow: {
     backgroundColor: '#18181B',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#27272A',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
   },
   timeRowActive: {
     borderColor: '#EF4444',
     backgroundColor: 'rgba(239, 68, 68, 0.06)',
+  },
+  timeRowInner: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   timeLabel: {
     color: '#F4F4F5',
@@ -401,16 +542,14 @@ const styles = StyleSheet.create({
   timeLabelActive: {
     color: '#F87171',
   },
-  militaryTime: {
-    color: '#71717A',
-    fontSize: 11,
-    fontFamily: 'monospace',
-    marginTop: 2,
+  emptyTimesContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  editHintText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#A1A1AA',
+  emptyTimesText: {
+    color: '#71717A',
+    fontSize: 13,
   },
   slotMachineCard: {
     backgroundColor: '#111113',
