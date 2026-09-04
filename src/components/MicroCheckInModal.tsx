@@ -56,6 +56,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
       setContextWhere(initialCheckIn.contextWhere || '');
       setTriggerNote(initialCheckIn.triggerNote || '');
       setUrgeNote(initialCheckIn.urgeNote || '');
+      setFocusedField(null);
       setIsRecordingSTT(false);
       setSttStatusMessage('');
     } else {
@@ -63,7 +64,8 @@ export const MicroCheckInModal: React.FC<Props> = ({
     }
   }, [initialCheckIn, visible]);
 
-  // Speech-to-text state
+  // Field focus and Speech-to-text state
+  const [focusedField, setFocusedField] = useState<'trigger' | 'urge' | null>(null);
   const [isRecordingSTT, setIsRecordingSTT] = useState<boolean>(false);
   const [sttTargetField, setSttTargetField] = useState<'trigger' | 'urge'>('trigger');
   const [sttStatusMessage, setSttStatusMessage] = useState<string>('');
@@ -76,22 +78,31 @@ export const MicroCheckInModal: React.FC<Props> = ({
     setPrimaryEmotion(firstEmotion);
   };
 
-  const toggleSpeechRecognition = async (target: 'trigger' | 'urge') => {
+  const startDictation = async (target: 'trigger' | 'urge') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (!isSpeechModuleInstalled()) {
       Alert.alert(
         'Voice Dictation',
-        'In Expo Go, native third-party modules are unavailable. You can dictate instantly by tapping the microphone key 🎙️ directly on your keyboard (Gboard)!\n\n(Standalone development builds support direct in-app voice transcription.)',
-        [{ text: 'Got it' }]
+        'In Expo Go, third-party native audio modules cannot run without a custom build.\n\nTip: You can dictate instantly using the 🎙️ mic key directly on your keyboard (Gboard)!\n\n(Standalone builds record and transcribe directly in-app.)',
+        [
+          { text: 'Got it' },
+          {
+            text: 'Insert Demo Speech',
+            onPress: () => {
+              const sample =
+                target === 'trigger'
+                  ? 'Sudden unexpected deadline notification'
+                  : 'Felt an urge to check email and pace around';
+              if (target === 'trigger') {
+                setTriggerNote((prev) => (prev ? `${prev} ${sample}` : sample));
+              } else {
+                setUrgeNote((prev) => (prev ? `${prev} ${sample}` : sample));
+              }
+            },
+          },
+        ]
       );
-      return;
-    }
-
-    if (isRecordingSTT) {
-      stopListening();
-      setIsRecordingSTT(false);
-      setSttStatusMessage('');
       return;
     }
 
@@ -132,6 +143,14 @@ export const MicroCheckInModal: React.FC<Props> = ({
     }
   };
 
+  const finishDictation = (target: 'trigger' | 'urge') => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    stopListening();
+    setIsRecordingSTT(false);
+    setSttStatusMessage('Transcribed!');
+    setTimeout(() => setSttStatusMessage(''), 1500);
+  };
+
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (isRecordingSTT) {
@@ -170,6 +189,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
     setContextWhere('');
     setTriggerNote('');
     setUrgeNote('');
+    setFocusedField(null);
     setIsRecordingSTT(false);
     setSttStatusMessage('');
   };
@@ -245,66 +265,102 @@ export const MicroCheckInModal: React.FC<Props> = ({
 
             {/* 5. Deep Context Prompts with Instant Speech-to-Text */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>5. Notes & Urges (Optional)</Text>
+              <Text style={styles.sectionTitle}>5. Notes & Urges</Text>
 
               {/* Trigger Input */}
               <View style={styles.noteFieldWrapper}>
                 <View style={styles.noteFieldHeader}>
                   <Text style={styles.noteFieldTitle}>What triggered this?</Text>
-                  <TouchableOpacity
-                    onPress={() => toggleSpeechRecognition('trigger')}
-                    style={[
-                      styles.sttBtn,
-                      isRecordingSTT && sttTargetField === 'trigger'
-                        ? styles.sttBtnActive
-                        : { backgroundColor: meta.badgeBg },
-                    ]}
-                  >
-                    {isRecordingSTT && sttTargetField === 'trigger' ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={[styles.sttBtnText, { color: meta.textColor }]}>🎤 Dictate (STT)</Text>
-                    )}
-                  </TouchableOpacity>
                 </View>
                 <TextInput
                   placeholder="e.g., Sudden meeting request, unexpected message..."
                   placeholderTextColor="#71717A"
                   value={triggerNote}
                   onChangeText={setTriggerNote}
+                  onFocus={() => setFocusedField('trigger')}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setFocusedField((curr) => (curr === 'trigger' && !isRecordingSTT ? null : curr));
+                    }, 300);
+                  }}
                   multiline
                   style={styles.textInput}
                 />
+                {(focusedField === 'trigger' || (isRecordingSTT && sttTargetField === 'trigger')) && (
+                  <View style={styles.fieldBottomBar}>
+                    {isRecordingSTT && sttTargetField === 'trigger' ? (
+                      <>
+                        <View style={styles.recordingStatusBadge}>
+                          <View style={styles.recordingRedDot} />
+                          <Text style={styles.recordingStatusText}>Listening...</Text>
+                        </View>
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => finishDictation('trigger')}
+                          style={styles.finishDictateBtn}
+                        >
+                          <Text style={styles.finishDictateBtnText}>⏹ Finish</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => startDictation('trigger')}
+                        style={[styles.dictateBtn, { borderColor: meta.color }]}
+                      >
+                        <Text style={styles.dictateBtnText}>🎤 Dictate</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
 
               {/* Urge Input */}
               <View style={[styles.noteFieldWrapper, { marginTop: 10 }]}>
                 <View style={styles.noteFieldHeader}>
                   <Text style={styles.noteFieldTitle}>What urges or behaviors do you notice?</Text>
-                  <TouchableOpacity
-                    onPress={() => toggleSpeechRecognition('urge')}
-                    style={[
-                      styles.sttBtn,
-                      isRecordingSTT && sttTargetField === 'urge'
-                        ? styles.sttBtnActive
-                        : { backgroundColor: meta.badgeBg },
-                    ]}
-                  >
-                    {isRecordingSTT && sttTargetField === 'urge' ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text style={[styles.sttBtnText, { color: meta.textColor }]}>🎤 Dictate (STT)</Text>
-                    )}
-                  </TouchableOpacity>
                 </View>
                 <TextInput
                   placeholder="e.g., Urge to scroll, urge to withdraw, urge to pace..."
                   placeholderTextColor="#71717A"
                   value={urgeNote}
                   onChangeText={setUrgeNote}
+                  onFocus={() => setFocusedField('urge')}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setFocusedField((curr) => (curr === 'urge' && !isRecordingSTT ? null : curr));
+                    }, 300);
+                  }}
                   multiline
                   style={styles.textInput}
                 />
+                {(focusedField === 'urge' || (isRecordingSTT && sttTargetField === 'urge')) && (
+                  <View style={styles.fieldBottomBar}>
+                    {isRecordingSTT && sttTargetField === 'urge' ? (
+                      <>
+                        <View style={styles.recordingStatusBadge}>
+                          <View style={styles.recordingRedDot} />
+                          <Text style={styles.recordingStatusText}>Listening...</Text>
+                        </View>
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => finishDictation('urge')}
+                          style={styles.finishDictateBtn}
+                        >
+                          <Text style={styles.finishDictateBtnText}>⏹ Finish</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => startDictation('urge')}
+                        style={[styles.dictateBtn, { borderColor: meta.color }]}
+                      >
+                        <Text style={styles.dictateBtnText}>🎤 Dictate</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
 
               {sttStatusMessage ? (
@@ -418,17 +474,59 @@ const styles = StyleSheet.create({
     color: '#A1A1AA',
     flexShrink: 1,
   },
-  sttBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+  fieldBottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    gap: 8,
   },
-  sttBtnActive: {
+  dictateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#27272A',
+    borderWidth: 1,
+  },
+  dictateBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F4F4F5',
+  },
+  recordingStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginRight: 'auto',
+  },
+  recordingRedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#EF4444',
   },
-  sttBtnText: {
-    fontSize: 10,
+  recordingStatusText: {
+    fontSize: 12,
+    color: '#EF4444',
     fontWeight: '700',
+  },
+  finishDictateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+  },
+  finishDictateBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   textInput: {
     minHeight: 48,

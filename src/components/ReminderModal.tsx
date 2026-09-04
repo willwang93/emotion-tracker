@@ -338,6 +338,19 @@ export const ReminderModal: React.FC<Props> = ({
     setTimes(updated);
   };
 
+  const handleAddTime = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    let hour = 12;
+    let newTime = '12:00';
+    while (times.includes(newTime) && hour < 23) {
+      hour++;
+      newTime = `${String(hour).padStart(2, '0')}:00`;
+    }
+    const updated = [...times, newTime];
+    setTimes(updated);
+    setEditingIndex(updated.length - 1);
+  };
+
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onSaveSettings({
@@ -413,6 +426,14 @@ export const ReminderModal: React.FC<Props> = ({
                 );
               })
             )}
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.addTimeBtn}
+              onPress={handleAddTime}
+            >
+              <Text style={styles.addTimeBtnText}>+ Add Reminder Time</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -631,5 +652,23 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#F4F4F5',
     fontWeight: '800',
+  },
+  addTimeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#18181B',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  addTimeBtnText: {
+    color: '#F4F4F5',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
