@@ -94,7 +94,6 @@ export const ContextSelector: React.FC<Props> = ({
           <View style={styles.chipsContainer}>
             {allWho.map((item) => {
               const isSelected = selectedWho.includes(item);
-              const isWife = item === 'Wife';
               return (
                 <TouchableOpacity
                   key={item}
@@ -104,14 +103,12 @@ export const ContextSelector: React.FC<Props> = ({
                     isSelected
                       ? { backgroundColor: accentColor, borderColor: accentColor }
                       : styles.chipDefault,
-                    isWife && !isSelected && styles.wifeChipDefault,
                   ]}
                 >
                   <Text
                     style={[
                       styles.chipText,
                       isSelected ? styles.chipTextSelected : styles.chipTextDefault,
-                      isWife && !isSelected && styles.wifeChipTextDefault,
                     ]}
                   >
                     {item}
@@ -281,14 +278,6 @@ const styles = StyleSheet.create({
   chipDefault: {
     backgroundColor: '#27272A',
     borderColor: '#3F3F46',
-  },
-  wifeChipDefault: {
-    borderColor: '#F43F5E',
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-  },
-  wifeChipTextDefault: {
-    color: '#FDA4AF',
-    fontWeight: '700',
   },
   chipText: {
     fontSize: 11,

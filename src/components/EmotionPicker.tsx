@@ -102,7 +102,6 @@ export const EmotionPicker: React.FC<Props> = ({
       <View style={styles.intensityContainer}>
         <View style={styles.intensityHeader}>
           <Text style={styles.intensityTitle}>Intensity</Text>
-          <Text style={[styles.intensityValue, { color: meta.textColor }]}>{intensity} / 10</Text>
         </View>
         <View style={styles.intensityPillsRow}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
@@ -246,11 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#A1A1AA',
-  },
-  intensityValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    fontFamily: 'monospace',
   },
   intensityPillsRow: {
     flexDirection: 'row',
