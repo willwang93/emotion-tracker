@@ -5,10 +5,11 @@ import { QUADRANTS } from '../constants/moodMeter';
 
 interface Props {
   checkIn: CheckIn;
+  onEdit?: (checkIn: CheckIn) => void;
   onDelete: (id: string) => void;
 }
 
-export const TimelineCard: React.FC<Props> = ({ checkIn, onDelete }) => {
+export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => {
   const meta = QUADRANTS[checkIn.quadrant] || QUADRANTS.red;
 
   const dateObj = new Date(checkIn.timestamp);
@@ -22,7 +23,9 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onDelete }) => {
   };
 
   return (
-    <View
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => onEdit?.(checkIn)}
       style={[
         styles.card,
         {
@@ -47,7 +50,18 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onDelete }) => {
 
         <View style={styles.timeAndAction}>
           <Text style={styles.timeText}>{timeFormatted}</Text>
-          <TouchableOpacity onPress={confirmDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            onPress={() => onEdit?.(checkIn)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.actionBtn}
+          >
+            <Text style={styles.editIcon}>✎</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={confirmDelete}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.actionBtn}
+          >
             <Text style={styles.deleteIcon}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -112,7 +126,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onDelete }) => {
           )}
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -163,10 +177,20 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     color: '#A1A1AA',
   },
+  actionBtn: {
+    padding: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editIcon: {
+    fontSize: 12,
+    color: '#A1A1AA',
+    paddingHorizontal: 3,
+  },
   deleteIcon: {
     fontSize: 13,
     color: '#71717A',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
   metaRow: {
     flexDirection: 'row',

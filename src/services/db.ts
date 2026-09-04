@@ -130,6 +130,41 @@ export async function insertCheckIn(checkIn: CheckIn): Promise<void> {
   );
 }
 
+export async function updateCheckIn(checkIn: CheckIn): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE check_ins SET
+      timestamp = ?,
+      quadrant = ?,
+      energy_level = ?,
+      pleasantness_level = ?,
+      primary_emotion = ?,
+      intensity = ?,
+      somatic_sensations = ?,
+      context_who = ?,
+      context_what = ?,
+      context_where = ?,
+      trigger_note = ?,
+      urge_note = ?
+    WHERE id = ?;`,
+    [
+      checkIn.timestamp,
+      checkIn.quadrant,
+      checkIn.energyLevel,
+      checkIn.pleasantnessLevel,
+      checkIn.primaryEmotion,
+      checkIn.intensity,
+      JSON.stringify(checkIn.somaticSensations || []),
+      JSON.stringify(checkIn.contextWho || []),
+      JSON.stringify(checkIn.contextWhat || []),
+      checkIn.contextWhere || null,
+      checkIn.triggerNote || null,
+      checkIn.urgeNote || null,
+      checkIn.id,
+    ]
+  );
+}
+
 export async function getCheckInsForDay(date: Date): Promise<CheckIn[]> {
   const db = await getDatabase();
   const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();

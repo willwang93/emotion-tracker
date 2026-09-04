@@ -39,7 +39,8 @@ export const SomaticSelector: React.FC<Props> = ({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const allSensations = [...SOMATIC_SENSATIONS, ...customList];
+  const customFromSelected = selectedSensations.filter((s) => !SOMATIC_SENSATIONS.includes(s));
+  const allSensations = Array.from(new Set([...SOMATIC_SENSATIONS, ...customList, ...customFromSelected]));
 
   return (
     <View style={styles.container}>

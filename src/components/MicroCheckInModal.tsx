@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -26,9 +26,15 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSave: (checkIn: CheckIn) => void;
+  initialCheckIn?: CheckIn | null;
 }
 
-export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave }) => {
+export const MicroCheckInModal: React.FC<Props> = ({
+  visible,
+  onClose,
+  onSave,
+  initialCheckIn,
+}) => {
   const [quadrant, setQuadrant] = useState<QuadrantType>('red');
   const [primaryEmotion, setPrimaryEmotion] = useState<string>('Anxious');
   const [intensity, setIntensity] = useState<number>(7);
@@ -38,6 +44,24 @@ export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave })
   const [contextWhere, setContextWhere] = useState<string>('');
   const [triggerNote, setTriggerNote] = useState<string>('');
   const [urgeNote, setUrgeNote] = useState<string>('');
+
+  useEffect(() => {
+    if (initialCheckIn) {
+      setQuadrant(initialCheckIn.quadrant);
+      setPrimaryEmotion(initialCheckIn.primaryEmotion);
+      setIntensity(initialCheckIn.intensity);
+      setSomaticSensations(initialCheckIn.somaticSensations || []);
+      setContextWho(initialCheckIn.contextWho || []);
+      setContextWhat(initialCheckIn.contextWhat || []);
+      setContextWhere(initialCheckIn.contextWhere || '');
+      setTriggerNote(initialCheckIn.triggerNote || '');
+      setUrgeNote(initialCheckIn.urgeNote || '');
+      setIsRecordingSTT(false);
+      setSttStatusMessage('');
+    } else {
+      resetForm();
+    }
+  }, [initialCheckIn, visible]);
 
   // Speech-to-text state
   const [isRecordingSTT, setIsRecordingSTT] = useState<boolean>(false);
@@ -114,9 +138,9 @@ export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave })
       stopListening();
     }
 
-    const newCheckIn: CheckIn = {
-      id: `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      timestamp: Date.now(),
+    const checkInToSave: CheckIn = {
+      id: initialCheckIn ? initialCheckIn.id : `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: initialCheckIn ? initialCheckIn.timestamp : Date.now(),
       quadrant,
       energyLevel: quadrant === 'red' || quadrant === 'yellow' ? 8 : 3,
       pleasantnessLevel: quadrant === 'yellow' || quadrant === 'green' ? 8 : 3,
@@ -128,10 +152,10 @@ export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave })
       contextWhere: contextWhere || undefined,
       triggerNote: triggerNote.trim() || undefined,
       urgeNote: urgeNote.trim() || undefined,
-      createdAt: Date.now(),
+      createdAt: initialCheckIn ? initialCheckIn.createdAt : Date.now(),
     };
 
-    onSave(newCheckIn);
+    onSave(checkInToSave);
     resetForm();
     onClose();
   };
@@ -163,8 +187,12 @@ export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave })
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <View style={styles.titleContainer}>
-              <Text style={styles.headerTitle}>Micro Check-In</Text>
-              <Text style={styles.headerSubtitle}>&lt; 30 Seconds</Text>
+              <Text style={styles.headerTitle}>
+                {initialCheckIn ? 'Edit Check-In' : 'Micro Check-In'}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                {initialCheckIn ? 'Update your reflection' : '< 30 Seconds'}
+              </Text>
             </View>
             <View style={styles.headerRightSpacer} />
           </View>
@@ -301,7 +329,9 @@ export const MicroCheckInModal: React.FC<Props> = ({ visible, onClose, onSave })
               style={[styles.saveBtn, { backgroundColor: meta.color }]}
               activeOpacity={0.85}
             >
-              <Text style={styles.saveBtnText}>Save Check-In</Text>
+              <Text style={styles.saveBtnText}>
+                {initialCheckIn ? 'Update Check-In' : 'Save Check-In'}
+              </Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

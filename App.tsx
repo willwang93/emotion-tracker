@@ -16,6 +16,7 @@ import {
   getDatabase,
   getCheckInsForDay,
   insertCheckIn,
+  updateCheckIn,
   deleteCheckIn,
   getReminderSettings,
   updateReminderSettings,
@@ -31,6 +32,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isCheckInModalVisible, setIsCheckInModalVisible] = useState<boolean>(false);
+  const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState<boolean>(false);
   const [reminderSetting, setReminderSetting] = useState<ReminderSetting>({
     id: 1,
@@ -62,16 +64,39 @@ export default function App() {
     loadData(selectedDate);
   };
 
-  const handleSaveCheckIn = async (newEntry: CheckIn) => {
+  const handleSaveCheckIn = async (entry: CheckIn) => {
     try {
-      await insertCheckIn(newEntry);
-      // Reload today's check-ins
-      const today = new Date();
-      setSelectedDate(today);
-      await loadData(today);
+      if (editingCheckIn) {
+        await updateCheckIn(entry);
+        setEditingCheckIn(null);
+        await loadData(selectedDate);
+      } else {
+        await insertCheckIn(entry);
+        // Reload today's check-ins
+        const today = new Date();
+        setSelectedDate(today);
+        await loadData(today);
+      }
     } catch (err) {
-      console.error('Failed to insert check-in:', err);
+      console.error('Failed to save check-in:', err);
     }
+  };
+
+  const handleEditCheckIn = (checkIn: CheckIn) => {
+    Haptics.selectionAsync();
+    setEditingCheckIn(checkIn);
+    setIsCheckInModalVisible(true);
+  };
+
+  const handleCloseCheckInModal = () => {
+    setIsCheckInModalVisible(false);
+    setEditingCheckIn(null);
+  };
+
+  const handleOpenNewCheckIn = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setEditingCheckIn(null);
+    setIsCheckInModalVisible(true);
   };
 
   const handleDeleteCheckIn = async (id: string) => {
@@ -144,6 +169,7 @@ export default function App() {
 
         <TouchableOpacity
           onPress={() => setSelectedDate(new Date())}
+          activeOpacity={0.7}
           style={styles.dateCenterBtn}
         >
           <Text style={styles.dateTitle}>{isToday ? `Today, ${formattedDate}` : formattedDate}</Text>
@@ -186,7 +212,7 @@ export default function App() {
                 Take 20 seconds to log where you are on the Mood Meter right now.
               </Text>
               <TouchableOpacity
-                onPress={() => setIsCheckInModalVisible(true)}
+                onPress={handleOpenNewCheckIn}
                 style={styles.emptyStateBtn}
                 activeOpacity={0.8}
               >
@@ -204,6 +230,7 @@ export default function App() {
                 <TimelineCard
                   key={item.id}
                   checkIn={item}
+                  onEdit={handleEditCheckIn}
                   onDelete={handleDeleteCheckIn}
                 />
               ))}
@@ -215,10 +242,7 @@ export default function App() {
       {/* Floating Bottom Action for Google Pixel 5 Ergonomics */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setIsCheckInModalVisible(true);
-          }}
+          onPress={handleOpenNewCheckIn}
           style={styles.fabBtn}
           activeOpacity={0.85}
         >
@@ -230,8 +254,9 @@ export default function App() {
       {/* Micro Check-In Modal */}
       <MicroCheckInModal
         visible={isCheckInModalVisible}
-        onClose={() => setIsCheckInModalVisible(false)}
+        onClose={handleCloseCheckInModal}
         onSave={handleSaveCheckIn}
+        initialCheckIn={editingCheckIn}
       />
 
       {/* Settings / Reminders Modal */}

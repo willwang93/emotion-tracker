@@ -77,8 +77,11 @@ export const ContextSelector: React.FC<Props> = ({
     onChangeWhere(selectedWhere === item ? '' : item);
   };
 
-  const allWho = [...CONTEXT_WHO, ...customWhoList];
-  const allWhat = [...CONTEXT_WHAT, ...customWhatList];
+  const customWhoFromSelected = selectedWho.filter((w) => !CONTEXT_WHO.includes(w));
+  const allWho = Array.from(new Set([...CONTEXT_WHO, ...customWhoList, ...customWhoFromSelected]));
+
+  const customWhatFromSelected = selectedWhat.filter((w) => !CONTEXT_WHAT.includes(w));
+  const allWhat = Array.from(new Set([...CONTEXT_WHAT, ...customWhatList, ...customWhatFromSelected]));
 
   return (
     <View style={styles.container}>
