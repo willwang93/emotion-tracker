@@ -264,7 +264,7 @@ export const ReminderModal: React.FC<Props> = ({
 
           {/* Schedule List */}
           <View style={styles.scheduleSection}>
-            <Text style={styles.sectionHeading}>Tap Any Time Card to Edit</Text>
+            <Text style={styles.sectionHeading}>Reminder times</Text>
 
             {times.map((t, idx) => {
               const isEditing = editingIndex === idx;
@@ -278,14 +278,8 @@ export const ReminderModal: React.FC<Props> = ({
                       isEditing && styles.timeRowActive,
                     ]}
                   >
-                    <View>
-                      <Text style={[styles.timeLabel, isEditing && styles.timeLabelActive]}>
-                        {getTimeLabel(t)}
-                      </Text>
-                      <Text style={styles.militaryTime}>({t})</Text>
-                    </View>
-                    <Text style={styles.editHintText}>
-                      {isEditing ? 'Tap to close ▴' : 'Edit ▾'}
+                    <Text style={[styles.timeLabel, isEditing && styles.timeLabelActive]}>
+                      {getTimeLabel(t)}
                     </Text>
                   </TouchableOpacity>
 
