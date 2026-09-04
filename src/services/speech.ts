@@ -1,5 +1,3 @@
-import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
-
 export interface SpeechCallbacks {
   onStart?: () => void;
   onResult?: (transcript: string, isFinal: boolean) => void;
@@ -7,30 +5,48 @@ export interface SpeechCallbacks {
   onEnd?: () => void;
 }
 
+let SpeechModule: any = null;
+
+function getModule(): any {
+  if (SpeechModule !== null) return SpeechModule;
+  try {
+    const mod = require('expo-speech-recognition');
+    SpeechModule = mod.ExpoSpeechRecognitionModule || null;
+  } catch (err) {
+    SpeechModule = false;
+  }
+  return SpeechModule;
+}
+
 let activeSubscriptions: Array<{ remove: () => void }> = [];
 let isListeningActive = false;
 
+export function isSpeechModuleInstalled(): boolean {
+  const mod = getModule();
+  return Boolean(mod && typeof mod.isRecognitionAvailable === 'function');
+}
+
 export async function checkSpeechRecognitionSupport(): Promise<boolean> {
   try {
-    if (!ExpoSpeechRecognitionModule || typeof ExpoSpeechRecognitionModule.isRecognitionAvailable !== 'function') {
+    const mod = getModule();
+    if (!mod || typeof mod.isRecognitionAvailable !== 'function') {
       return false;
     }
-    return await ExpoSpeechRecognitionModule.isRecognitionAvailable();
+    return await mod.isRecognitionAvailable();
   } catch (err) {
-    console.warn('Speech recognition availability check failed:', err);
     return false;
   }
 }
 
 export async function requestSpeechPermissions(): Promise<boolean> {
   try {
-    if (!ExpoSpeechRecognitionModule || typeof ExpoSpeechRecognitionModule.requestPermissionsAsync !== 'function') {
+    const mod = getModule();
+    if (!mod || typeof mod.requestPermissionsAsync !== 'function') {
       return false;
     }
-    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    const result = await mod.requestPermissionsAsync();
     return result.granted;
   } catch (err) {
-    console.warn('Speech recognition permission request failed:', err);
     return false;
   }
 }
@@ -39,7 +55,9 @@ export async function startListening(callbacks: SpeechCallbacks): Promise<boolea
   try {
     const isSupported = await checkSpeechRecognitionSupport();
     if (!isSupported) {
-      callbacks.onError?.('Speech recognition is not supported on this device/environment.');
+      callbacks.onError?.(
+        'Speech module not embedded in Expo Go. Use the mic icon on your keyboard (Gboard) for instant dictation!'
+      );
       return false;
     }
 
@@ -49,34 +67,34 @@ export async function startListening(callbacks: SpeechCallbacks): Promise<boolea
       return false;
     }
 
-    // Clear old subscriptions if any
     stopListening();
 
-    const startSub = ExpoSpeechRecognitionModule.addListener('start', () => {
+    const mod = getModule();
+    const startSub = mod.addListener('start', () => {
       isListeningActive = true;
       callbacks.onStart?.();
     });
 
-    const resultSub = ExpoSpeechRecognitionModule.addListener('result', (event: any) => {
+    const resultSub = mod.addListener('result', (event: any) => {
       const transcripts = event?.results || [];
       const transcript = transcripts[0]?.transcript || transcripts[0] || '';
       const isFinal = Boolean(event?.isFinal);
       callbacks.onResult?.(transcript, isFinal);
     });
 
-    const errorSub = ExpoSpeechRecognitionModule.addListener('error', (event: any) => {
+    const errorSub = mod.addListener('error', (event: any) => {
       isListeningActive = false;
       callbacks.onError?.(event?.message || 'Error occurred during speech recognition');
     });
 
-    const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
+    const endSub = mod.addListener('end', () => {
       isListeningActive = false;
       callbacks.onEnd?.();
     });
 
     activeSubscriptions = [startSub, resultSub, errorSub, endSub];
 
-    await ExpoSpeechRecognitionModule.start({
+    await mod.start({
       lang: 'en-US',
       interimResults: true,
       continuous: false,
@@ -93,8 +111,9 @@ export async function startListening(callbacks: SpeechCallbacks): Promise<boolea
 
 export function stopListening() {
   try {
-    if (isListeningActive && ExpoSpeechRecognitionModule && typeof ExpoSpeechRecognitionModule.stop === 'function') {
-      ExpoSpeechRecognitionModule.stop();
+    const mod = getModule();
+    if (isListeningActive && mod && typeof mod.stop === 'function') {
+      mod.stop();
     }
   } catch (e) {
     // Ignore error on stop
