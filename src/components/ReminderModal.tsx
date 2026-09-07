@@ -1,300 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Switch,
   ScrollView,
-  Animated,
-  PanResponder,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { ReminderSetting } from '../types';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SWIPE_THRESHOLD = -85;
-
-const ITEM_HEIGHT = 44;
-const VISIBLE_ITEMS = 3;
-const WHEEL_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
-
-const HOURS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-const PERIODS = ['AM', 'PM'];
-
-function parse24to12(timeStr: string) {
-  const [hStr, mStr] = (timeStr || '09:00').split(':');
-  const h = parseInt(hStr, 10) || 0;
-  const m = parseInt(mStr, 10) || 0;
-  const period = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return {
-    hour: String(h12).padStart(2, '0'),
-    minute: String(m).padStart(2, '0'),
-    period,
-  };
-}
-
-function format12to24(hour12Str: string, minuteStr: string, period: string) {
-  const h12 = parseInt(hour12Str, 10);
-  const m = parseInt(minuteStr, 10);
-  let h24 = h12;
-  if (period === 'PM') {
-    h24 = h12 === 12 ? 12 : h12 + 12;
-  } else {
-    h24 = h12 === 12 ? 0 : h12;
-  }
-  return `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-function getTimeLabel(timeStr: string) {
-  const [hStr, mStr] = (timeStr || '09:00').split(':');
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  const date = new Date();
-  date.setHours(h, m, 0);
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-interface WheelColumnProps {
-  items: string[];
-  selectedValue: string;
-  onValueChange: (val: string) => void;
-  flex?: number;
-}
-
-const WheelColumn: React.FC<WheelColumnProps> = ({
-  items,
-  selectedValue,
-  onValueChange,
-  flex = 1,
-}) => {
-  const scrollRef = useRef<ScrollView>(null);
-  const selectedIndex = Math.max(0, items.indexOf(selectedValue));
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({
-      y: selectedIndex * ITEM_HEIGHT,
-      animated: false,
-    });
-  }, []);
-
-  const handleMomentumScrollEnd = (e: any) => {
-    const offsetY = e.nativeEvent.contentOffset.y;
-    const index = Math.max(0, Math.min(items.length - 1, Math.round(offsetY / ITEM_HEIGHT)));
-    const val = items[index];
-    if (val !== selectedValue) {
-      Haptics.selectionAsync();
-      onValueChange(val);
-    }
-  };
-
-  return (
-    <View style={[styles.wheelColumn, { flex }]}>
-      <ScrollView
-        ref={scrollRef}
-        nestedScrollEnabled
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_HEIGHT}
-        decelerationRate="fast"
-        onMomentumScrollEnd={handleMomentumScrollEnd}
-        contentContainerStyle={styles.wheelContent}
-      >
-        {items.map((item, idx) => {
-          const isSelected = item === selectedValue;
-          return (
-            <TouchableOpacity
-              key={item}
-              style={styles.wheelItem}
-              onPress={() => {
-                Haptics.selectionAsync();
-                scrollRef.current?.scrollTo({ y: idx * ITEM_HEIGHT, animated: true });
-                onValueChange(item);
-              }}
-            >
-              <Text style={[styles.wheelItemText, isSelected && styles.wheelItemTextSelected]}>
-                {item}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-};
-
-interface SlotMachinePickerProps {
-  timeStr: string;
-  onChangeTime: (newTimeStr: string) => void;
-  onDone: () => void;
-}
-
-const SlotMachinePicker: React.FC<SlotMachinePickerProps> = ({
-  timeStr,
-  onChangeTime,
-  onDone,
-}) => {
-  const parsed = parse24to12(timeStr);
-  const [hour, setHour] = useState(parsed.hour);
-  const [minute, setMinute] = useState(parsed.minute);
-  const [period, setPeriod] = useState(parsed.period);
-
-  const updateHour = (newHour: string) => {
-    setHour(newHour);
-    onChangeTime(format12to24(newHour, minute, period));
-  };
-
-  const updateMinute = (newMin: string) => {
-    setMinute(newMin);
-    onChangeTime(format12to24(hour, newMin, period));
-  };
-
-  const updatePeriod = (newPeriod: string) => {
-    setPeriod(newPeriod);
-    onChangeTime(format12to24(hour, minute, newPeriod));
-  };
-
-  return (
-    <View style={styles.slotMachineCard}>
-      <View style={styles.slotHeaderRow}>
-        <Text style={styles.slotHeaderTitle}>Scroll Hour & Minute</Text>
-        <TouchableOpacity onPress={onDone} style={styles.slotDoneBtn}>
-          <Text style={styles.slotDoneBtnText}>Done</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.slotMachineWrapper}>
-        {/* Middle highlight band */}
-        <View style={styles.slotHighlightBand} pointerEvents="none" />
-
-        <WheelColumn
-          items={HOURS}
-          selectedValue={hour}
-          onValueChange={updateHour}
-        />
-        <Text style={styles.colonSeparator}>:</Text>
-        <WheelColumn
-          items={MINUTES}
-          selectedValue={minute}
-          onValueChange={updateMinute}
-        />
-        <WheelColumn
-          items={PERIODS}
-          selectedValue={period}
-          onValueChange={updatePeriod}
-        />
-      </View>
-    </View>
-  );
-};
-
-interface SwipeableTimeCardProps {
-  time: string;
-  isEditing: boolean;
-  onPress: () => void;
-  onDelete: () => void;
-}
-
-const SwipeableTimeCard: React.FC<SwipeableTimeCardProps> = ({
-  time,
-  isEditing,
-  onPress,
-  onDelete,
-}) => {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const isSwiping = useRef(false);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-        return isHorizontal && Math.abs(gestureState.dx) > 10;
-      },
-      onPanResponderGrant: () => {
-        isSwiping.current = true;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0) {
-          translateX.setValue(gestureState.dx);
-        } else {
-          translateX.setValue(0);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < SWIPE_THRESHOLD) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          Animated.timing(translateX, {
-            toValue: -SCREEN_WIDTH,
-            duration: 180,
-            useNativeDriver: true,
-          }).start(() => {
-            onDelete();
-          });
-        } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 4,
-          }).start();
-        }
-        setTimeout(() => {
-          isSwiping.current = false;
-        }, 120);
-      },
-      onPanResponderTerminate: () => {
-        Animated.spring(translateX, {
-          toValue: 0,
-          useNativeDriver: true,
-        }).start();
-        isSwiping.current = false;
-      },
-    })
-  ).current;
-
-  const handlePress = () => {
-    if (!isSwiping.current) {
-      onPress();
-    }
-  };
-
-  const deleteOpacity = translateX.interpolate({
-    inputRange: [-60, -10, 0],
-    outputRange: [1, 0.2, 0],
-    extrapolate: 'clamp',
-  });
-
-  return (
-    <View style={styles.swipeWrapper}>
-      <Animated.View style={[styles.deleteBackground, { opacity: deleteOpacity }]}>
-        <Text style={styles.deleteBackgroundText}>🗑️ Delete</Text>
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.timeRow,
-          isEditing && styles.timeRowActive,
-          { transform: [{ translateX }] },
-        ]}
-        {...panResponder.panHandlers}
-      >
-        <TouchableOpacity
-          activeOpacity={0.75}
-          onPress={handlePress}
-          style={styles.timeRowInner}
-        >
-          <Text style={[styles.timeLabel, isEditing && styles.timeLabelActive]}>
-            {getTimeLabel(time)}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
-  );
-};
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface Props {
   visible: boolean;
@@ -303,42 +19,44 @@ interface Props {
   onSaveSettings: (setting: ReminderSetting) => void;
 }
 
+function parseTimeDisplay(t: string): string {
+  const [hStr, mStr] = (t || '09:00').split(':');
+  const h = parseInt(hStr, 10) || 0;
+  const m = parseInt(mStr, 10) || 0;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 export const ReminderModal: React.FC<Props> = ({
   visible,
   onClose,
   setting,
   onSaveSettings,
 }) => {
-  const [enabled, setEnabled] = useState(setting.enabled);
-  const [times, setTimes] = useState<string[]>(setting.times);
+  const { theme, isDark } = useAppTheme();
+  const [times, setTimes] = useState<string[]>(setting.times || []);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const handleToggleEnabled = (val: boolean) => {
+  // Quick picker state
+  const [pickerHour, setPickerHour] = useState<number>(9);
+  const [pickerMinute, setPickerMinute] = useState<number>(0);
+  const [pickerPeriod, setPickerPeriod] = useState<'AM' | 'PM'>('AM');
+
+  const openPickerForIndex = (idx: number) => {
     Haptics.selectionAsync();
-    setEnabled(val);
+    const t = times[idx] || '09:00';
+    const [hStr, mStr] = t.split(':');
+    const h = parseInt(hStr, 10) || 0;
+    const m = parseInt(mStr, 10) || 0;
+    setPickerPeriod(h >= 12 ? 'PM' : 'AM');
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    setPickerHour(h12);
+    setPickerMinute(m);
+    setEditingIndex(idx);
   };
 
-  const handleToggleEdit = (index: number) => {
-    Haptics.selectionAsync();
-    setEditingIndex((prev) => (prev === index ? null : index));
-  };
-
-  const handleDeleteTime = (index: number) => {
-    setTimes((prev) => prev.filter((_, i) => i !== index));
-    if (editingIndex === index) {
-      setEditingIndex(null);
-    } else if (editingIndex !== null && editingIndex > index) {
-      setEditingIndex((prev) => (prev !== null ? prev - 1 : null));
-    }
-  };
-
-  const handleUpdateTimeAtIndex = (index: number, newTime: string) => {
-    const updated = [...times];
-    updated[index] = newTime;
-    setTimes(updated);
-  };
-
-  const handleAddTime = () => {
+  const handleAddNewTime = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     let hour = 12;
     let newTime = '12:00';
@@ -348,91 +66,260 @@ export const ReminderModal: React.FC<Props> = ({
     }
     const updated = [...times, newTime];
     setTimes(updated);
-    setEditingIndex(updated.length - 1);
+    openPickerForIndex(updated.length - 1);
   };
 
-  const handleSave = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleDeleteTime = (idx: number) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    const updated = times.filter((_, i) => i !== idx);
+    setTimes(updated);
+    if (editingIndex === idx) {
+      setEditingIndex(null);
+    } else if (editingIndex !== null && editingIndex > idx) {
+      setEditingIndex(editingIndex - 1);
+    }
     onSaveSettings({
-      id: 1,
-      enabled,
+      ...setting,
+      times: updated,
+    });
+  };
+
+  const handleSavePickerTime = () => {
+    if (editingIndex === null) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    let h24 = pickerHour;
+    if (pickerPeriod === 'PM') {
+      h24 = pickerHour === 12 ? 12 : pickerHour + 12;
+    } else {
+      h24 = pickerHour === 12 ? 0 : pickerHour;
+    }
+    const formatted = `${String(h24).padStart(2, '0')}:${String(pickerMinute).padStart(2, '0')}`;
+    const updated = [...times];
+    updated[editingIndex] = formatted;
+    setTimes(updated);
+    setEditingIndex(null);
+
+    onSaveSettings({
+      ...setting,
+      times: updated,
+    });
+  };
+
+  const handleDone = () => {
+    Haptics.selectionAsync();
+    onSaveSettings({
+      ...setting,
       times,
     });
     onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reminders & Nudges</Text>
-          <TouchableOpacity onPress={handleSave} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.saveHeaderBtn}>Save</Text>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleDone}
+    >
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        {/* Top Masthead */}
+        <View style={[styles.topBar, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border }]}>
+          <Text style={[styles.modalTitle, { color: theme.text }]}>Preferences</Text>
+          <TouchableOpacity
+            onPress={handleDone}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={[styles.doneBtnText, { color: theme.text }]}>Done</Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-          {/* Main Toggle Card */}
-          <View style={styles.card}>
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleTextContainer}>
-                <Text style={styles.cardTitle}>Daily Check-In Nudges</Text>
-                <Text style={styles.cardSubtitle}>
-                  Receive gentle, scheduled notifications on your device
-                </Text>
-              </View>
-              <Switch
-                value={enabled}
-                onValueChange={handleToggleEnabled}
-                trackColor={{ false: '#27272A', true: '#EF4444' }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Section: Reflection reminders */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionHeading, { color: theme.textSubtle }]}>
+              REFLECTION REMINDERS
+            </Text>
+            <Text style={[styles.sectionDesc, { color: theme.textMuted }]}>
+              Quiet daily check-in nudges delivered to your lockscreen.
+            </Text>
 
-          {/* Schedule List */}
-          <View style={styles.scheduleSection}>
-            <Text style={styles.sectionHeading}>Reminder times</Text>
-
-            {times.length === 0 ? (
-              <View style={styles.emptyTimesContainer}>
-                <Text style={styles.emptyTimesText}>No reminder times scheduled</Text>
-              </View>
-            ) : (
-              times.map((t, idx) => {
-                const isEditing = editingIndex === idx;
+            {/* List of Reminder Time Chips with Delete '✕' Button */}
+            <View style={styles.timesContainer}>
+              {times.map((t, idx) => {
+                const isSelected = editingIndex === idx;
                 return (
-                  <View key={`${idx}-${t}`} style={styles.timeCardContainer}>
-                    <SwipeableTimeCard
-                      time={t}
-                      isEditing={isEditing}
-                      onPress={() => handleToggleEdit(idx)}
-                      onDelete={() => handleDeleteTime(idx)}
-                    />
+                  <View
+                    key={`${t}-${idx}`}
+                    style={[
+                      styles.timeChip,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                        borderColor: isSelected
+                          ? theme.text
+                          : isDark
+                          ? 'rgba(255, 255, 255, 0.08)'
+                          : theme.border,
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => openPickerForIndex(idx)}
+                      style={styles.timeChipLabelBtn}
+                    >
+                      <Text style={[styles.timeChipText, { color: theme.text }]}>
+                        {parseTimeDisplay(t)}
+                      </Text>
+                    </TouchableOpacity>
 
-                    {/* Slot Machine Wheel Picker for this item */}
-                    {isEditing && (
-                      <SlotMachinePicker
-                        timeStr={t}
-                        onChangeTime={(newTime) => handleUpdateTimeAtIndex(idx, newTime)}
-                        onDone={() => setEditingIndex(null)}
-                      />
-                    )}
+                    {/* Delete '✕' Button */}
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => handleDeleteTime(idx)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.deleteChipBtn}
+                    >
+                      <Text style={[styles.deleteChipText, { color: theme.textMuted }]}>✕</Text>
+                    </TouchableOpacity>
                   </View>
                 );
-              })
+              })}
+            </View>
+
+            {/* Inline Time Editor if an item is selected */}
+            {editingIndex !== null && (
+              <View
+                style={[
+                  styles.editorCard,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : theme.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.editorTitle, { color: theme.textSubtle }]}>
+                  EDIT TIME ({editingIndex + 1})
+                </Text>
+
+                <View style={styles.pickerRow}>
+                  {/* Hour Selector */}
+                  <View style={styles.pickerCol}>
+                    <Text style={[styles.pickerColLabel, { color: theme.textSubtle }]}>HOUR</Text>
+                    <View style={styles.stepperRow}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setPickerHour((prev) => (prev === 1 ? 12 : prev - 1));
+                        }}
+                        style={[styles.stepperBtn, { borderColor: theme.border }]}
+                      >
+                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.stepperVal, { color: theme.text }]}>
+                        {String(pickerHour).padStart(2, '0')}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setPickerHour((prev) => (prev === 12 ? 1 : prev + 1));
+                        }}
+                        style={[styles.stepperBtn, { borderColor: theme.border }]}
+                      >
+                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Minute Selector */}
+                  <View style={styles.pickerCol}>
+                    <Text style={[styles.pickerColLabel, { color: theme.textSubtle }]}>MINUTE</Text>
+                    <View style={styles.stepperRow}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setPickerMinute((prev) => (prev === 0 ? 45 : prev - 15));
+                        }}
+                        style={[styles.stepperBtn, { borderColor: theme.border }]}
+                      >
+                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.stepperVal, { color: theme.text }]}>
+                        {String(pickerMinute).padStart(2, '0')}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setPickerMinute((prev) => (prev === 45 ? 0 : prev + 15));
+                        }}
+                        style={[styles.stepperBtn, { borderColor: theme.border }]}
+                      >
+                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Period Selector */}
+                  <View style={styles.pickerCol}>
+                    <Text style={[styles.pickerColLabel, { color: theme.textSubtle }]}>PERIOD</Text>
+                    <View style={styles.periodToggleRow}>
+                      {(['AM', 'PM'] as const).map((p) => {
+                        const isPActive = pickerPeriod === p;
+                        return (
+                          <TouchableOpacity
+                            key={p}
+                            onPress={() => {
+                              Haptics.selectionAsync();
+                              setPickerPeriod(p);
+                            }}
+                            style={[
+                              styles.periodBtn,
+                              isPActive
+                                ? { backgroundColor: theme.text }
+                                : { borderColor: theme.border, borderWidth: 1 },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.periodBtnText,
+                                { color: isPActive ? (isDark ? '#000000' : '#FFFFFF') : theme.textMuted },
+                              ]}
+                            >
+                              {p}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleSavePickerTime}
+                  style={[styles.saveTimeBtn, { backgroundColor: theme.text }]}
+                >
+                  <Text style={[styles.saveTimeBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
+                    Save Time
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
 
+            {/* + Add Time Button */}
             <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.addTimeBtn}
-              onPress={handleAddTime}
+              activeOpacity={0.8}
+              onPress={handleAddNewTime}
+              style={[
+                styles.addTimeBtn,
+                {
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.border,
+                },
+              ]}
             >
-              <Text style={styles.addTimeBtnText}>+ Add Reminder Time</Text>
+              <Text style={[styles.addTimeBtnText, { color: theme.text }]}>+ Add Time</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -444,231 +331,175 @@ export const ReminderModal: React.FC<Props> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#09090B',
   },
-  header: {
+  topBar: {
     height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#27272A',
   },
-  cancelText: {
-    color: '#A1A1AA',
-    fontSize: 14,
+  modalTitle: {
+    fontFamily: 'serif',
+    fontSize: 18,
+    fontWeight: '400',
+    letterSpacing: -0.3,
   },
-  headerTitle: {
-    color: '#F4F4F5',
+  doneBtnText: {
+    fontFamily: 'monospace',
     fontSize: 13,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
-  saveHeaderBtn: {
-    color: '#EF4444',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  body: {
+  scroll: {
     flex: 1,
   },
-  bodyContent: {
-    padding: 16,
+  scrollContent: {
+    padding: 20,
   },
-  card: {
-    backgroundColor: '#18181B',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    padding: 14,
-    marginBottom: 16,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  toggleTextContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  cardTitle: {
-    color: '#F4F4F5',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  cardSubtitle: {
-    color: '#71717A',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  scheduleSection: {
-    marginBottom: 16,
+  section: {
+    marginBottom: 28,
   },
   sectionHeading: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    color: '#A1A1AA',
-    marginBottom: 10,
-  },
-  timeCardContainer: {
-    marginBottom: 8,
-  },
-  swipeWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  deleteBackground: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#DC2626',
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingRight: 18,
-  },
-  deleteBackgroundText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  timeRow: {
-    backgroundColor: '#18181B',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#27272A',
-  },
-  timeRowActive: {
-    borderColor: '#EF4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.06)',
-  },
-  timeRowInner: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  timeLabel: {
-    color: '#F4F4F5',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  timeLabelActive: {
-    color: '#F87171',
-  },
-  emptyTimesContainer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyTimesText: {
-    color: '#71717A',
-    fontSize: 13,
-  },
-  slotMachineCard: {
-    backgroundColor: '#111113',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: '#27272A',
-    padding: 12,
-  },
-  slotHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 6,
   },
-  slotHeaderTitle: {
-    fontSize: 11,
-    color: '#A1A1AA',
-    fontWeight: '700',
-    textTransform: 'uppercase',
+  sectionDesc: {
+    fontFamily: 'serif',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
   },
-  slotDoneBtn: {
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  timesContainer: {
+    gap: 8,
+    marginBottom: 12,
   },
-  slotDoneBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  slotMachineWrapper: {
-    height: WHEEL_HEIGHT,
+  timeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  slotHighlightBand: {
-    position: 'absolute',
-    top: ITEM_HEIGHT,
-    left: 0,
-    right: 0,
-    height: ITEM_HEIGHT,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  colonSeparator: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#A1A1AA',
-    marginHorizontal: 8,
-  },
-  wheelColumn: {
-    height: WHEEL_HEIGHT,
-  },
-  wheelContent: {
-    paddingVertical: ITEM_HEIGHT,
-    alignItems: 'center',
-  },
-  wheelItem: {
-    height: ITEM_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  wheelItemText: {
-    fontSize: 16,
-    color: '#71717A',
-    fontWeight: '600',
-  },
-  wheelItemTextSelected: {
-    fontSize: 20,
-    color: '#F4F4F5',
-    fontWeight: '800',
-  },
-  addTimeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#18181B',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#3F3F46',
-    borderStyle: 'dashed',
+  },
+  timeChipLabelBtn: {
+    flex: 1,
+  },
+  timeChipText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  deleteChipBtn: {
+    padding: 6,
+  },
+  deleteChipText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  addTimeBtn: {
     paddingVertical: 14,
-    marginTop: 8,
-    marginBottom: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
   },
   addTimeBtnText: {
-    color: '#F4F4F5',
+    fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  editorCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+  },
+  editorTitle: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  pickerCol: {
+    flex: 1,
+  },
+  pickerColLabel: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepperBtn: {
+    width: 28,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperBtnText: {
+    fontFamily: 'monospace',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  stepperVal: {
+    fontFamily: 'monospace',
     fontSize: 14,
     fontWeight: '700',
   },
+  periodToggleRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  periodBtn: {
+    flex: 1,
+    height: 32,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodBtnText: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  saveTimeBtn: {
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveTimeBtnText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
 });
+

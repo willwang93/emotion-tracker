@@ -46,6 +46,11 @@ function initDatabaseSync(db: SQLite.SQLiteDatabase) {
       times TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     INSERT OR IGNORE INTO reminder_settings (id, enabled, times)
     VALUES (1, 1, '["09:00", "13:00", "18:00", "21:30"]');
   `);
@@ -76,6 +81,11 @@ async function initDatabase(db: SQLite.SQLiteDatabase) {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       enabled INTEGER NOT NULL DEFAULT 1,
       times TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
     );
 
     INSERT OR IGNORE INTO reminder_settings (id, enabled, times)
@@ -210,3 +220,31 @@ export async function updateReminderSettings(settings: ReminderSetting): Promise
     [settings.enabled ? 1 : 0, JSON.stringify(settings.times)]
   );
 }
+
+export async function getThemeSetting(): Promise<'system' | 'light' | 'dark'> {
+  try {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<any>(
+      `SELECT value FROM app_settings WHERE key = 'theme_mode';`
+    );
+    if (row && (row.value === 'light' || row.value === 'dark' || row.value === 'system')) {
+      return row.value;
+    }
+  } catch (err) {
+    console.warn('Error reading theme setting:', err);
+  }
+  return 'system';
+}
+
+export async function setThemeSetting(mode: 'system' | 'light' | 'dark'): Promise<void> {
+  try {
+    const db = await getDatabase();
+    await db.runAsync(
+      `INSERT OR REPLACE INTO app_settings (key, value) VALUES ('theme_mode', ?);`,
+      [mode]
+    );
+  } catch (err) {
+    console.warn('Error saving theme setting:', err);
+  }
+}
+

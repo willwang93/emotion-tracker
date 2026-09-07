@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import * as Haptics from 'expo-haptics';
 import { QuadrantType, EmotionItem } from '../types';
 import { EMOTIONS, QUADRANTS } from '../constants/moodMeter';
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface Props {
   quadrant: QuadrantType;
@@ -19,6 +20,8 @@ export const EmotionPicker: React.FC<Props> = ({
   intensity,
   onChangeIntensity,
 }) => {
+  const { theme, isDark } = useAppTheme();
+  const qMeta = theme.quadrants[quadrant] || theme.quadrants.red;
   const emotionsList = EMOTIONS[quadrant] || [];
   const meta = QUADRANTS[quadrant];
 
@@ -40,11 +43,11 @@ export const EmotionPicker: React.FC<Props> = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>2. Name The Feeling</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Name The Feeling</Text>
       </View>
 
       {/* Emotion Chips */}
-      <View style={styles.chipsWrapper}>
+      <View style={[styles.chipsWrapper, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
         <ScrollView
           nestedScrollEnabled
           contentContainerStyle={styles.chipsContainer}
@@ -59,14 +62,25 @@ export const EmotionPicker: React.FC<Props> = ({
                 style={[
                   styles.emotionChip,
                   isSelected
-                    ? { backgroundColor: meta.color, borderColor: meta.color }
-                    : styles.emotionChipDefault,
+                    ? {
+                        backgroundColor: qMeta.color,
+                        borderColor: qMeta.color,
+                        shadowColor: qMeta.color,
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: isDark ? 0.35 : 0.2,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }
+                    : {
+                        backgroundColor: isDark ? '#27272A' : theme.surface,
+                        borderColor: theme.border,
+                      },
                 ]}
               >
                 <Text
                   style={[
                     styles.emotionChipText,
-                    isSelected ? styles.emotionChipTextSelected : styles.emotionChipTextDefault,
+                    isSelected ? styles.emotionChipTextSelected : { color: theme.text, fontWeight: '500' },
                   ]}
                 >
                   {item.name}
@@ -83,25 +97,25 @@ export const EmotionPicker: React.FC<Props> = ({
           style={[
             styles.definitionCard,
             {
-              backgroundColor: meta.subtleBg,
-              borderColor: meta.badgeBg,
+              backgroundColor: qMeta.subtleBg,
+              borderColor: isDark ? qMeta.color : qMeta.activeBorder,
             },
           ]}
         >
           <View style={styles.definitionHeader}>
             <View style={styles.wordAndBadge}>
-              <Text style={styles.definitionLabel}>Definition:</Text>
-              <Text style={styles.definitionWord}>{currentEmotionItem.name}</Text>
+              <Text style={[styles.definitionLabel, { color: theme.textMuted }]}>Definition:</Text>
+              <Text style={[styles.definitionWord, { color: isDark ? '#FFFFFF' : qMeta.color }]}>{currentEmotionItem.name}</Text>
             </View>
           </View>
-          <Text style={styles.definitionBody}>{currentEmotionItem.definition}</Text>
+          <Text style={[styles.definitionBody, { color: theme.text }]}>{currentEmotionItem.definition}</Text>
         </View>
       )}
 
       {/* Intensity Selector (1 - 10) */}
-      <View style={styles.intensityContainer}>
+      <View style={[styles.intensityContainer, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
         <View style={styles.intensityHeader}>
-          <Text style={styles.intensityTitle}>Intensity</Text>
+          <Text style={[styles.intensityTitle, { color: theme.textMuted }]}>Intensity</Text>
         </View>
         <View style={styles.intensityPillsRow}>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
@@ -113,14 +127,25 @@ export const EmotionPicker: React.FC<Props> = ({
                 style={[
                   styles.intensityPill,
                   isSelected
-                    ? { backgroundColor: meta.color, borderColor: meta.color }
-                    : styles.intensityPillDefault,
+                    ? {
+                        backgroundColor: qMeta.color,
+                        borderColor: qMeta.color,
+                        shadowColor: qMeta.color,
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: isDark ? 0.35 : 0.2,
+                        shadowRadius: 3,
+                        elevation: 2,
+                      }
+                    : {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                      },
                 ]}
               >
                 <Text
                   style={[
                     styles.intensityPillText,
-                    isSelected && styles.intensityPillTextSelected,
+                    isSelected ? styles.intensityPillTextSelected : { color: theme.textMuted },
                   ]}
                 >
                   {num}

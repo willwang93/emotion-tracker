@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SOMATIC_SENSATIONS } from '../constants/moodMeter';
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface Props {
   selectedSensations: string[];
@@ -14,6 +15,7 @@ export const SomaticSelector: React.FC<Props> = ({
   onChange,
   accentColor,
 }) => {
+  const { theme, isDark } = useAppTheme();
   const [customInput, setCustomInput] = useState('');
   const [customList, setCustomList] = useState<string[]>([]);
 
@@ -45,7 +47,7 @@ export const SomaticSelector: React.FC<Props> = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>3. Body Sensations (Somatic)</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Body Sensations</Text>
       </View>
 
       <View style={styles.chipsContainer}>
@@ -58,14 +60,25 @@ export const SomaticSelector: React.FC<Props> = ({
               style={[
                 styles.chip,
                 isSelected
-                  ? { backgroundColor: accentColor, borderColor: accentColor }
-                  : styles.chipDefault,
+                  ? {
+                      backgroundColor: accentColor,
+                      borderColor: accentColor,
+                      shadowColor: accentColor,
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: isDark ? 0.35 : 0.15,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    }
+                  : {
+                      backgroundColor: theme.surface,
+                      borderColor: theme.border,
+                    },
               ]}
             >
               <Text
                 style={[
                   styles.chipText,
-                  isSelected ? styles.chipTextSelected : styles.chipTextDefault,
+                  isSelected ? styles.chipTextSelected : { color: theme.text, fontWeight: '500' },
                 ]}
               >
                 {item}
@@ -79,22 +92,38 @@ export const SomaticSelector: React.FC<Props> = ({
       <View style={styles.customRow}>
         <TextInput
           placeholder="+ Add custom physical sensation..."
-          placeholderTextColor="#71717A"
+          placeholderTextColor={theme.textSubtle}
           value={customInput}
           onChangeText={setCustomInput}
           onSubmitEditing={handleAddCustom}
           returnKeyType="done"
-          style={styles.customInput}
+          style={[
+            styles.customInput,
+            {
+              backgroundColor: theme.inputBg,
+              borderColor: theme.border,
+              color: theme.text,
+            },
+          ]}
         />
         <TouchableOpacity
           onPress={handleAddCustom}
           disabled={!customInput.trim()}
           style={[
             styles.addBtn,
-            customInput.trim() ? { backgroundColor: accentColor } : styles.addBtnDisabled,
+            customInput.trim()
+              ? { backgroundColor: accentColor }
+              : { backgroundColor: theme.surfaceSecondary },
           ]}
         >
-          <Text style={styles.addBtnText}>Add</Text>
+          <Text
+            style={[
+              styles.addBtnText,
+              { color: customInput.trim() ? '#FFFFFF' : theme.textMuted },
+            ]}
+          >
+            Add
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -152,18 +181,21 @@ const styles = StyleSheet.create({
   },
   customInput: {
     flex: 1,
-    height: 34,
+    height: 36,
     backgroundColor: '#18181B',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#27272A',
     paddingHorizontal: 10,
+    paddingVertical: 0,
     color: '#F4F4F5',
-    fontSize: 11,
+    fontSize: 12,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   addBtn: {
     paddingHorizontal: 12,
-    height: 34,
+    height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -173,7 +205,9 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });

@@ -2,56 +2,79 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { QuadrantType } from '../types';
-import { QUADRANTS } from '../constants/moodMeter';
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface Props {
   selectedQuadrant: QuadrantType;
   onSelect: (quadrant: QuadrantType) => void;
 }
 
+const QUADRANT_DATA: Record<QuadrantType, { line1: string; line2: string }> = {
+  red: { line1: 'High energy', line2: 'Unpleasant' },
+  yellow: { line1: 'High energy', line2: 'Pleasant' },
+  blue: { line1: 'Low energy', line2: 'Unpleasant' },
+  green: { line1: 'Low energy', line2: 'Pleasant' },
+};
+
 export const QuadrantSelector: React.FC<Props> = ({ selectedQuadrant, onSelect }) => {
+  const { theme, isDark } = useAppTheme();
+
   const handlePress = (quadrant: QuadrantType) => {
     Haptics.selectionAsync();
     onSelect(quadrant);
   };
 
-  const renderQuadrantTile = (quadrant: QuadrantType) => {
-    const meta = QUADRANTS[quadrant];
+  const renderTile = (quadrant: QuadrantType) => {
+    const qMeta = theme.quadrants[quadrant];
+    const item = QUADRANT_DATA[quadrant];
     const isSelected = selectedQuadrant === quadrant;
 
     return (
       <TouchableOpacity
         key={quadrant}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         onPress={() => handlePress(quadrant)}
         style={[
           styles.tile,
           {
-            backgroundColor: isSelected ? meta.subtleBg : 'rgba(255, 255, 255, 0.04)',
-            borderColor: isSelected ? meta.activeBorder : 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: isSelected
+              ? qMeta.subtleBg
+              : isDark
+              ? 'rgba(255, 255, 255, 0.03)'
+              : theme.surfaceSecondary,
+            borderColor: isSelected
+              ? qMeta.activeBorder
+              : isDark
+              ? 'rgba(255, 255, 255, 0.08)'
+              : theme.border,
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
       >
-        <View style={styles.tileHeader}>
-          <Text style={[styles.tileCode, { color: meta.color }]}>
-            {quadrant.toUpperCase()}
-          </Text>
-          <Text style={styles.tileEmoji}>{meta.emoji}</Text>
-        </View>
-
-        <View style={styles.tileBody}>
-          <Text style={[styles.tileEnergy, isSelected && { color: meta.textColor }]}>
-            {meta.energyLabel}
-          </Text>
-          <Text style={[styles.tilePleasantness, isSelected && { color: meta.textColor }]}>
-            {meta.pleasantnessLabel}
-          </Text>
-        </View>
-
-        {isSelected && (
-          <View style={[styles.selectedIndicator, { backgroundColor: meta.color }]} />
-        )}
+        <Text
+          style={[
+            styles.line1,
+            {
+              color: isSelected
+                ? (isDark ? '#FFFFFF' : qMeta.color)
+                : theme.text,
+            },
+          ]}
+        >
+          {item.line1}
+        </Text>
+        <Text
+          style={[
+            styles.line2,
+            {
+              color: isSelected
+                ? (isDark ? qMeta.textColor : qMeta.color)
+                : theme.textMuted,
+            },
+          ]}
+        >
+          {item.line2}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -60,12 +83,12 @@ export const QuadrantSelector: React.FC<Props> = ({ selectedQuadrant, onSelect }
     <View style={styles.container}>
       <View style={styles.grid}>
         <View style={styles.row}>
-          {renderQuadrantTile('red')}
-          {renderQuadrantTile('yellow')}
+          {renderTile('red')}
+          {renderTile('yellow')}
         </View>
         <View style={styles.row}>
-          {renderQuadrantTile('blue')}
-          {renderQuadrantTile('green')}
+          {renderTile('blue')}
+          {renderTile('green')}
         </View>
       </View>
     </View>
@@ -74,54 +97,33 @@ export const QuadrantSelector: React.FC<Props> = ({ selectedQuadrant, onSelect }
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 6,
+    marginVertical: 8,
   },
   grid: {
-    gap: 8,
+    gap: 10,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   tile: {
     flex: 1,
-    height: 86,
-    borderRadius: 16,
-    padding: 10,
-    justifyContent: 'space-between',
-    position: 'relative',
-    overflow: 'hidden',
+    height: 84,
+    borderRadius: 14,
+    padding: 14,
+    justifyContent: 'center',
   },
-  tileHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tileCode: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  tileEmoji: {
-    fontSize: 16,
-  },
-  tileBody: {
-    marginTop: 2,
-  },
-  tileEnergy: {
+  line1: {
+    fontFamily: 'monospace',
     fontSize: 12,
     fontWeight: '700',
-    color: '#E4E4E7',
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
-  tilePleasantness: {
+  line2: {
+    fontFamily: 'monospace',
     fontSize: 11,
-    color: '#A1A1AA',
-  },
-  selectedIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
 });

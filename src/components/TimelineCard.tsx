@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { CheckIn } from '../types';
-import { QUADRANTS } from '../constants/moodMeter';
+import { useAppTheme } from '../theme/ThemeContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = -85;
@@ -22,10 +22,13 @@ interface Props {
 }
 
 export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => {
-  const meta = QUADRANTS[checkIn.quadrant] || QUADRANTS.red;
+  const { theme, isDark } = useAppTheme();
+  const qMeta = theme.quadrants[checkIn.quadrant] || theme.quadrants.red;
 
   const dateObj = new Date(checkIn.timestamp);
-  const timeFormatted = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeFormatted = dateObj
+    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    .toUpperCase();
 
   const translateX = useRef(new Animated.Value(0)).current;
   const isSwiping = useRef(false);
@@ -34,7 +37,6 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Capture horizontal swipe left
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
         return isHorizontal && Math.abs(gestureState.dx) > 10;
       },
@@ -42,7 +44,6 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
         isSwiping.current = true;
       },
       onPanResponderMove: (_, gestureState) => {
-        // Only allow swiping to the left
         if (gestureState.dx < 0) {
           translateX.setValue(gestureState.dx);
         } else {
@@ -92,11 +93,29 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
     extrapolate: 'clamp',
   });
 
+  // Construct location & company kicker
+  // e.g. "09:15 AM · AT THE OFFICE DESK WITH WIFE"
+  const locationPart = checkIn.contextWhere ? `AT THE ${checkIn.contextWhere.toUpperCase()}` : '';
+  const whoPart = checkIn.contextWho && checkIn.contextWho.length > 0
+    ? (checkIn.contextWho.includes('Alone') ? 'ALONE' : `WITH ${checkIn.contextWho.join(', ').toUpperCase()}`)
+    : '';
+
+  const kickerDetails = [locationPart, whoPart].filter(Boolean).join(' ');
+  const kickerFull = kickerDetails ? `${timeFormatted} · ${kickerDetails}` : timeFormatted;
+
+  // Hero quote: User's reflection text
+  const reflectionText = checkIn.triggerNote || checkIn.urgeNote || `Noticed a quiet sense of feeling ${checkIn.primaryEmotion.toLowerCase()}.`;
+
+  // Body areas summary
+  const bodySummary = checkIn.somaticSensations && checkIn.somaticSensations.length > 0
+    ? ` · ${checkIn.somaticSensations.join(', ')}`
+    : '';
+
   return (
     <View style={styles.swipeWrapper}>
       {/* Background delete indicator revealed on swipe left */}
       <Animated.View style={[styles.deleteBackground, { opacity: deleteOpacity }]}>
-        <Text style={styles.deleteBackgroundText}>🗑️ Delete</Text>
+        <Text style={styles.deleteBackgroundText}>DELETE</Text>
       </Animated.View>
 
       {/* Swipeable Card Foreground */}
@@ -104,77 +123,49 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
         style={[
           styles.card,
           {
-            borderColor: meta.badgeBg,
-            backgroundColor: '#18181B',
+            backgroundColor: isDark ? 'rgba(17, 24, 39, 0.85)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+            borderLeftColor: qMeta.color,
+            borderLeftWidth: 3,
             transform: [{ translateX }],
           },
         ]}
         {...panResponder.panHandlers}
       >
         <TouchableOpacity
-          activeOpacity={0.85}
+          activeOpacity={0.82}
           onPress={handleCardPress}
+          style={styles.cardInner}
         >
-          {/* Card Header */}
-          <View style={styles.header}>
-            <View style={styles.emotionTitleRow}>
-              <View style={[styles.colorDot, { backgroundColor: meta.color }]} />
-              <Text style={[styles.emotionText, { color: meta.textColor }]}>
-                {checkIn.primaryEmotion}
-              </Text>
-            </View>
+          {/* Top Kicker: Typewriter Monospace */}
+          <Text style={[styles.kickerText, { color: theme.textMuted }]}>
+            {kickerFull}
+          </Text>
 
-            <Text style={styles.timeText}>{timeFormatted}</Text>
-          </View>
-
-          {/* Intensity and Context Summary */}
-          <View style={styles.metaRow}>
-            <Text style={styles.metaText}>
-              Intensity: <Text style={styles.boldText}>{checkIn.intensity} / 10</Text>
+          {/* Hero Quote: Editorial Serif Italic */}
+          <View style={styles.quoteWrapper}>
+            <Text
+              style={[
+                styles.heroQuote,
+                {
+                  color: theme.text,
+                },
+              ]}
+            >
+              “{reflectionText}”
             </Text>
-            {checkIn.contextWho.length > 0 && (
-              <>
-                <Text style={styles.dotSeparator}>•</Text>
-                <Text style={styles.metaText}>
-                  With: <Text style={[styles.boldText, checkIn.contextWho.includes('Wife') && styles.wifeHighlight]}>
-                    {checkIn.contextWho.join(', ')}
-                  </Text>
-                </Text>
-              </>
-            )}
-            {checkIn.contextWhat.length > 0 && (
-              <>
-                <Text style={styles.dotSeparator}>•</Text>
-                <Text style={styles.metaText}>
-                  Doing: <Text style={styles.boldText}>{checkIn.contextWhat.join(', ')}</Text>
-                </Text>
-              </>
-            )}
-            {checkIn.contextWhere && (
-              <>
-                <Text style={styles.dotSeparator}>•</Text>
-                <Text style={styles.metaText}>@{checkIn.contextWhere}</Text>
-              </>
-            )}
           </View>
 
-          {/* Trigger & Urge Notes */}
-          {(checkIn.triggerNote || checkIn.urgeNote) && (
-            <View style={styles.notesBox}>
-              {checkIn.triggerNote && (
-                <Text style={styles.noteLine}>
-                  <Text style={styles.noteLabel}>Trigger: </Text>
-                  {checkIn.triggerNote}
-                </Text>
-              )}
-              {checkIn.urgeNote && (
-                <Text style={[styles.noteLine, checkIn.triggerNote && styles.noteLineSpacing]}>
-                  <Text style={styles.noteLabel}>Urge / Behavior: </Text>
-                  {checkIn.urgeNote}
-                </Text>
-              )}
-            </View>
-          )}
+          {/* Byline: Typewriter Monospace with Quadrant Color Accent */}
+          <View style={styles.bylineRow}>
+            <Text style={[styles.bylineDash, { color: qMeta.color }]}>—</Text>
+            <Text style={[styles.bylineEmotion, { color: qMeta.color }]}>
+              {checkIn.primaryEmotion.toUpperCase()}
+            </Text>
+            <Text style={[styles.bylineDetails, { color: theme.textSubtle }]}>
+              {` · Intensity ${checkIn.intensity}${bodySummary}`}
+            </Text>
+          </View>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -194,7 +185,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#DC2626',
-    borderRadius: 18,
+    borderRadius: 14,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -202,81 +193,58 @@ const styles = StyleSheet.create({
   },
   deleteBackgroundText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
-    letterSpacing: 0.5,
+    fontFamily: 'monospace',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 1.5,
   },
   card: {
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 14,
+    overflow: 'hidden',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  cardInner: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  kickerText: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
     marginBottom: 8,
   },
-  emotionTitleRow: {
+  quoteWrapper: {
+    marginBottom: 10,
+  },
+  heroQuote: {
+    fontFamily: 'serif',
+    fontStyle: 'italic',
+    fontSize: 17,
+    lineHeight: 25,
+    letterSpacing: -0.2,
+  },
+  bylineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flexShrink: 1,
-  },
-  colorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  emotionText: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  timeText: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#A1A1AA',
-  },
-  metaRow: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'center',
-    marginBottom: 4,
+    marginTop: 2,
   },
-  metaText: {
+  bylineDash: {
+    fontFamily: 'monospace',
     fontSize: 11,
-    color: '#A1A1AA',
-  },
-  boldText: {
-    color: '#F4F4F5',
     fontWeight: '700',
+    marginRight: 6,
   },
-  wifeHighlight: {
-    color: '#FDA4AF',
+  bylineEmotion: {
+    fontFamily: 'monospace',
+    fontSize: 11,
     fontWeight: '800',
+    letterSpacing: 0.8,
   },
-  dotSeparator: {
-    color: '#52525B',
-    marginHorizontal: 5,
-  },
-  notesBox: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 10,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    marginTop: 6,
-  },
-  noteLine: {
+  bylineDetails: {
+    fontFamily: 'monospace',
     fontSize: 11,
-    color: '#D4D4D8',
-    lineHeight: 16,
-  },
-  noteLineSpacing: {
-    marginTop: 4,
-  },
-  noteLabel: {
-    fontWeight: '700',
-    color: '#A1A1AA',
+    letterSpacing: 0.4,
   },
 });

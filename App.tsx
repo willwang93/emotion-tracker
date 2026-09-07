@@ -25,8 +25,10 @@ import { scheduleReminders } from './src/services/notifications';
 import { TimelineCard } from './src/components/TimelineCard';
 import { MicroCheckInModal } from './src/components/MicroCheckInModal';
 import { ReminderModal } from './src/components/ReminderModal';
+import { ThemeProvider, useAppTheme } from './src/theme/ThemeContext';
 
-export default function App() {
+function MainApp() {
+  const { theme, isDark } = useAppTheme();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -129,67 +131,61 @@ export default function App() {
   const isToday =
     selectedDate.toDateString() === new Date().toDateString();
 
-  const formattedDate = selectedDate.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
+  // e.g. "September 6, 2026"
+  const formattedLongDate = selectedDate.toLocaleDateString('en-US', {
+    month: 'long',
     day: 'numeric',
+    year: 'numeric',
   });
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="light" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <StatusBar style={theme.statusBar} />
 
-      {/* Main Top Header */}
-      <View style={styles.header}>
-        <View>
-          <View style={styles.appTitleRow}>
-            <Text style={styles.appTitle}>Emotion Tracker</Text>
-            <View style={styles.v1Badge}>
-              <Text style={styles.v1BadgeText}>V1</Text>
-            </View>
-          </View>
-          <Text style={styles.appSubtitle}>Yale Mood Meter • Micro Check-In</Text>
+      {/* Date Masthead & Header */}
+      <View style={styles.masthead}>
+        <View style={styles.mastheadTopRow}>
+          <Text style={[styles.mastheadDate, { color: theme.text }]}>
+            {formattedLongDate}
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => setIsSettingsModalVisible(true)}
+            style={styles.settingsIconBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={[styles.settingsIconText, { color: theme.textMuted }]}>⚙</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => setIsSettingsModalVisible(true)}
-          style={styles.settingsBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Text style={styles.settingsBtnIcon}>⚙️</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Quiet literary text links: ‹ Yesterday and Tomorrow › */}
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            onPress={() => changeDateBy(-1)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.navTextLink, { color: theme.textSubtle }]}>
+              ‹ Yesterday
+            </Text>
+          </TouchableOpacity>
 
-      {/* Date Switcher Bar */}
-      <View style={styles.dateBar}>
-        <TouchableOpacity onPress={() => changeDateBy(-1)} style={styles.dateNavBtn}>
-          <Text style={styles.dateNavText}>‹</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setSelectedDate(new Date())}
-          activeOpacity={0.7}
-          style={styles.dateCenterBtn}
-        >
-          <Text style={styles.dateTitle}>{isToday ? `Today, ${formattedDate}` : formattedDate}</Text>
-          {!isToday && <Text style={styles.jumpTodayText}>Tap to jump to Today</Text>}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => changeDateBy(1)}
-          disabled={isToday}
-          style={[styles.dateNavBtn, isToday && styles.dateNavBtnDisabled]}
-        >
-          <Text style={[styles.dateNavText, isToday && styles.dateNavTextDisabled]}>›</Text>
-        </TouchableOpacity>
+          {!isToday && (
+            <TouchableOpacity
+              onPress={() => changeDateBy(1)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.navTextLink, { color: theme.textSubtle }]}>
+                Tomorrow ›
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Timeline Scrollable View */}
       {isLoading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#EF4444" />
-          <Text style={styles.loaderText}>Loading check-ins...</Text>
+          <ActivityIndicator size="small" color={theme.textMuted} />
         </View>
       ) : (
         <ScrollView
@@ -199,33 +195,22 @@ export default function App() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor="#EF4444"
-              colors={['#EF4444']}
+              tintColor={theme.textMuted}
+              colors={[theme.textMuted]}
             />
           }
         >
           {checkIns.length === 0 ? (
             <View style={styles.emptyStateContainer}>
-              <Text style={styles.emptyStateEmoji}>🌱</Text>
-              <Text style={styles.emptyStateTitle}>No check-ins yet for this day</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                Take 20 seconds to log where you are on the Mood Meter right now.
+              <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
+                No moments recorded
               </Text>
-              <TouchableOpacity
-                onPress={handleOpenNewCheckIn}
-                style={styles.emptyStateBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.emptyStateBtnText}>+ Start Quick Check-In</Text>
-              </TouchableOpacity>
+              <Text style={[styles.emptyStateSubtitle, { color: theme.textMuted }]}>
+                This day awaits its first honest passage.
+              </Text>
             </View>
           ) : (
             <View style={styles.timelineList}>
-              <View style={styles.timelineCountRow}>
-                <Text style={styles.timelineCountText}>
-                  {checkIns.length} {checkIns.length === 1 ? 'Check-In' : 'Check-Ins'} logged
-                </Text>
-              </View>
               {checkIns.map((item) => (
                 <TimelineCard
                   key={item.id}
@@ -239,15 +224,25 @@ export default function App() {
         </ScrollView>
       )}
 
-      {/* Floating Bottom Action for Google Pixel 5 Ergonomics */}
-      <View style={styles.bottomBar}>
+      {/* Floating Bottom Action with Soft Background Fade */}
+      <View
+        style={[
+          styles.bottomFloatingContainer,
+          {
+            backgroundColor: isDark
+              ? 'rgba(9, 13, 22, 0.92)'
+              : 'rgba(253, 251, 247, 0.92)',
+          },
+        ]}
+      >
         <TouchableOpacity
           onPress={handleOpenNewCheckIn}
-          style={styles.fabBtn}
+          style={[styles.fullWidthAddBtn, { backgroundColor: isDark ? '#FFFFFF' : '#1F2937' }]}
           activeOpacity={0.85}
         >
-          <Text style={styles.fabPlus}>+</Text>
-          <Text style={styles.fabText}>Quick Check-In</Text>
+          <Text style={[styles.fullWidthAddBtnText, { color: isDark ? '#090D16' : '#FFFFFF' }]}>
+            + New Entry
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -266,7 +261,17 @@ export default function App() {
         setting={reminderSetting}
         onSaveSettings={handleSaveSettings}
       />
-      </SafeAreaView>
+    </SafeAreaView>
+  );
+}
+
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <MainApp />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
@@ -274,203 +279,101 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#09090B',
   },
-  header: {
+  masthead: {
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
+  mastheadTopRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#27272A',
   },
-  appTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  appTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#F4F4F5',
+  mastheadDate: {
+    fontFamily: 'serif',
+    fontSize: 28,
+    fontWeight: '400',
     letterSpacing: -0.5,
   },
-  v1Badge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  v1BadgeText: {
-    color: '#EF4444',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  appSubtitle: {
-    fontSize: 11,
-    color: '#71717A',
-    marginTop: 2,
-  },
-  settingsBtn: {
+  settingsIconBtn: {
     padding: 6,
-    borderRadius: 10,
-    backgroundColor: '#18181B',
-    borderWidth: 1,
-    borderColor: '#27272A',
   },
-  settingsBtnIcon: {
-    fontSize: 15,
+  settingsIconText: {
+    fontSize: 18,
   },
-  dateBar: {
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#121215',
-    borderBottomWidth: 1,
-    borderBottomColor: '#27272A',
+    gap: 16,
+    marginTop: 8,
   },
-  dateNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#18181B',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#27272A',
-  },
-  dateNavBtnDisabled: {
-    opacity: 0.3,
-  },
-  dateNavText: {
-    color: '#F4F4F5',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  dateNavTextDisabled: {
-    color: '#71717A',
-  },
-  dateCenterBtn: {
-    alignItems: 'center',
-  },
-  dateTitle: {
-    color: '#F4F4F5',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  jumpTodayText: {
-    fontSize: 9,
-    color: '#EF4444',
-    marginTop: 2,
+  navTextLink: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   loaderContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-  },
-  loaderText: {
-    color: '#A1A1AA',
-    fontSize: 12,
   },
   feedScroll: {
     flex: 1,
   },
   feedContent: {
-    padding: 16,
-    paddingBottom: 90,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 110,
   },
   emptyStateContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-  },
-  emptyStateEmoji: {
-    fontSize: 42,
-    marginBottom: 12,
+    paddingVertical: 100,
+    paddingHorizontal: 28,
   },
   emptyStateTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#F4F4F5',
+    fontFamily: 'serif',
+    fontSize: 18,
+    fontStyle: 'italic',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   emptyStateSubtitle: {
-    fontSize: 12,
-    color: '#71717A',
+    fontFamily: 'monospace',
+    fontSize: 11,
     textAlign: 'center',
+    letterSpacing: 0.3,
     lineHeight: 18,
-    marginBottom: 20,
-  },
-  emptyStateBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: '#EF4444',
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  emptyStateBtnText: {
-    color: '#EF4444',
-    fontSize: 13,
-    fontWeight: '700',
   },
   timelineList: {
-    gap: 4,
+    gap: 2,
   },
-  timelineCountRow: {
-    marginBottom: 4,
-  },
-  timelineCountText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#71717A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  bottomBar: {
+  bottomFloatingContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(9, 9, 11, 0.95)',
-    borderTopWidth: 1,
-    borderTopColor: '#27272A',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  fabBtn: {
+  fullWidthAddBtn: {
     height: 50,
-    backgroundColor: '#EF4444',
-    borderRadius: 16,
-    flexDirection: 'row',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#EF4444',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
-  fabPlus: {
-    color: '#FFFFFF',
-    fontSize: 20,
+  fullWidthAddBtnText: {
+    fontFamily: 'monospace',
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 22,
-  },
-  fabText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });

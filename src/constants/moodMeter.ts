@@ -3,51 +3,51 @@ import { EmotionItem, QuadrantMeta, QuadrantType } from '../types';
 export const QUADRANTS: Record<QuadrantType, QuadrantMeta> = {
   red: {
     id: 'red',
-    label: 'High Energy • Unpleasant',
-    energyLabel: 'High Energy',
+    label: 'High energy / Unpleasant',
+    energyLabel: 'High energy',
     pleasantnessLabel: 'Unpleasant',
     color: '#EF4444',
     subtleBg: 'rgba(239, 68, 68, 0.12)',
     activeBorder: '#EF4444',
     textColor: '#F87171',
     badgeBg: 'rgba(239, 68, 68, 0.2)',
-    emoji: '⚡️',
+    emoji: '',
   },
   yellow: {
     id: 'yellow',
-    label: 'High Energy • Pleasant',
-    energyLabel: 'High Energy',
+    label: 'High energy / Pleasant',
+    energyLabel: 'High energy',
     pleasantnessLabel: 'Pleasant',
     color: '#F59E0B',
     subtleBg: 'rgba(245, 158, 11, 0.12)',
     activeBorder: '#F59E0B',
     textColor: '#FBBF24',
     badgeBg: 'rgba(245, 158, 11, 0.2)',
-    emoji: '☀️',
+    emoji: '',
   },
   blue: {
     id: 'blue',
-    label: 'Low Energy • Unpleasant',
-    energyLabel: 'Low Energy',
+    label: 'Low energy / Unpleasant',
+    energyLabel: 'Low energy',
     pleasantnessLabel: 'Unpleasant',
     color: '#3B82F6',
     subtleBg: 'rgba(59, 130, 246, 0.12)',
     activeBorder: '#3B82F6',
     textColor: '#60A5FA',
     badgeBg: 'rgba(59, 130, 246, 0.2)',
-    emoji: '🌧',
+    emoji: '',
   },
   green: {
     id: 'green',
-    label: 'Low Energy • Pleasant',
-    energyLabel: 'Low Energy',
+    label: 'Low energy / Pleasant',
+    energyLabel: 'Low energy',
     pleasantnessLabel: 'Pleasant',
     color: '#10B981',
     subtleBg: 'rgba(16, 185, 129, 0.12)',
     activeBorder: '#10B981',
     textColor: '#34D399',
     badgeBg: 'rgba(16, 185, 129, 0.2)',
-    emoji: '🌱',
+    emoji: '',
   },
 };
 
@@ -207,25 +207,31 @@ export const EMOTIONS: Record<QuadrantType, EmotionItem[]> = {
 };
 
 export const SOMATIC_SENSATIONS = [
-  'Chest tightness',
-  'Clenched jaw',
-  'Racing heart',
-  'Shallow breath',
-  'Tight throat',
-  'Gut flutter / pit',
-  'Nauseous',
-  'Headache / pressure',
-  'Muscle tension',
+  'Throat',
+  'Chest',
+  'Stomach',
+  'Jaw',
+  'Shoulders & Neck',
+  'Head / Temples',
+  'Breath',
   'Heavy limbs',
-  'Shaky / trembling',
-  'Hot / flushed',
-  'Cold / clammy',
-  'Relaxed / loose',
-  'Light / airy',
-  'Deep breathing',
+  'Whole body',
+  'Shaky / Trembling',
+  'Hot / Flushed',
+  'Cold / Clammy',
+  'Relaxed / Loose',
+  'Light / Airy',
 ];
 
-export const CONTEXT_WHO = ['Alone', 'Wife', 'Family'];
+export const CONTEXT_WHO = [
+  'Alone',
+  'Wife',
+  'Partner',
+  'Family',
+  'Friends',
+  'Colleagues',
+  'Strangers',
+];
 
 export const CONTEXT_WHAT = [
   'Work',
@@ -243,4 +249,14 @@ export const CONTEXT_WHAT = [
   'Traveling',
 ];
 
-export const CONTEXT_WHERE = ['Home', 'Office', 'Transit', 'Outdoors', 'Gym', 'Cafe'];
+export const CONTEXT_WHERE = [
+  'Office Desk',
+  'Home',
+  'Library',
+  'Balcony',
+  'Cafe',
+  'Transit',
+  'Outdoors',
+  'Gym',
+];
+

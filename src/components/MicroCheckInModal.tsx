@@ -9,18 +9,14 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { CheckIn, QuadrantType } from '../types';
-import { QUADRANTS, EMOTIONS } from '../constants/moodMeter';
+import { EMOTIONS, SOMATIC_SENSATIONS, CONTEXT_WHO, CONTEXT_WHERE } from '../constants/moodMeter';
 import { QuadrantSelector } from './QuadrantSelector';
-import { EmotionPicker } from './EmotionPicker';
-import { SomaticSelector } from './SomaticSelector';
-import { ContextSelector } from './ContextSelector';
-import { startListening, stopListening, isListening, isSpeechModuleInstalled } from '../services/speech';
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface Props {
   visible: boolean;
@@ -35,15 +31,15 @@ export const MicroCheckInModal: React.FC<Props> = ({
   onSave,
   initialCheckIn,
 }) => {
+  const { theme, isDark } = useAppTheme();
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [quadrant, setQuadrant] = useState<QuadrantType>('red');
   const [primaryEmotion, setPrimaryEmotion] = useState<string>('Anxious');
   const [intensity, setIntensity] = useState<number>(7);
   const [somaticSensations, setSomaticSensations] = useState<string[]>([]);
   const [contextWho, setContextWho] = useState<string[]>([]);
-  const [contextWhat, setContextWhat] = useState<string[]>([]);
   const [contextWhere, setContextWhere] = useState<string>('');
-  const [triggerNote, setTriggerNote] = useState<string>('');
-  const [urgeNote, setUrgeNote] = useState<string>('');
+  const [reasonNote, setReasonNote] = useState<string>('');
 
   useEffect(() => {
     if (initialCheckIn) {
@@ -52,25 +48,29 @@ export const MicroCheckInModal: React.FC<Props> = ({
       setIntensity(initialCheckIn.intensity);
       setSomaticSensations(initialCheckIn.somaticSensations || []);
       setContextWho(initialCheckIn.contextWho || []);
-      setContextWhat(initialCheckIn.contextWhat || []);
       setContextWhere(initialCheckIn.contextWhere || '');
-      setTriggerNote(initialCheckIn.triggerNote || '');
-      setUrgeNote(initialCheckIn.urgeNote || '');
-      setFocusedField(null);
-      setIsRecordingSTT(false);
-      setSttStatusMessage('');
+      setReasonNote(initialCheckIn.triggerNote || initialCheckIn.urgeNote || '');
     } else {
       resetForm();
     }
+    setCurrentStep(1);
   }, [initialCheckIn, visible]);
 
-  // Field focus and Speech-to-text state
-  const [focusedField, setFocusedField] = useState<'trigger' | 'urge' | null>(null);
-  const [isRecordingSTT, setIsRecordingSTT] = useState<boolean>(false);
-  const [sttTargetField, setSttTargetField] = useState<'trigger' | 'urge'>('trigger');
-  const [sttStatusMessage, setSttStatusMessage] = useState<string>('');
+  // Android hardware back button handler
+  useEffect(() => {
+    if (!visible) return;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (currentStep > 1) {
+        prevStep();
+        return true;
+      }
+      onClose();
+      return true;
+    });
+    return () => backHandler.remove();
+  }, [visible, currentStep]);
 
-  const meta = QUADRANTS[quadrant];
+  const qMeta = theme.quadrants[quadrant];
 
   const handleQuadrantChange = (newQuadrant: QuadrantType) => {
     setQuadrant(newQuadrant);
@@ -78,84 +78,47 @@ export const MicroCheckInModal: React.FC<Props> = ({
     setPrimaryEmotion(firstEmotion);
   };
 
-  const startDictation = async (target: 'trigger' | 'urge') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    if (!isSpeechModuleInstalled()) {
-      Alert.alert(
-        'Voice Dictation',
-        'In Expo Go, third-party native audio modules cannot run without a custom build.\n\nTip: You can dictate instantly using the 🎙️ mic key directly on your keyboard (Gboard)!\n\n(Standalone builds record and transcribe directly in-app.)',
-        [
-          { text: 'Got it' },
-          {
-            text: 'Insert Demo Speech',
-            onPress: () => {
-              const sample =
-                target === 'trigger'
-                  ? 'Sudden unexpected deadline notification'
-                  : 'Felt an urge to check email and pace around';
-              if (target === 'trigger') {
-                setTriggerNote((prev) => (prev ? `${prev} ${sample}` : sample));
-              } else {
-                setUrgeNote((prev) => (prev ? `${prev} ${sample}` : sample));
-              }
-            },
-          },
-        ]
-      );
-      return;
-    }
-
-    setSttTargetField(target);
-    setIsRecordingSTT(true);
-    setSttStatusMessage('Listening... Speak now');
-
-    const started = await startListening({
-      onStart: () => {
-        setIsRecordingSTT(true);
-        setSttStatusMessage('Listening...');
-      },
-      onResult: (transcript, isFinal) => {
-        if (target === 'trigger') {
-          setTriggerNote((prev) => (prev ? `${prev} ${transcript}` : transcript));
-        } else {
-          setUrgeNote((prev) => (prev ? `${prev} ${transcript}` : transcript));
-        }
-        if (isFinal) {
-          setIsRecordingSTT(false);
-          setSttStatusMessage('Transcribed!');
-          setTimeout(() => setSttStatusMessage(''), 1500);
-        }
-      },
-      onError: (err) => {
-        setIsRecordingSTT(false);
-        setSttStatusMessage(`Dictation note: ${err}`);
-        setTimeout(() => setSttStatusMessage(''), 3000);
-      },
-      onEnd: () => {
-        setIsRecordingSTT(false);
-        setSttStatusMessage('');
-      },
-    });
-
-    if (!started) {
-      setIsRecordingSTT(false);
+  const nextStep = () => {
+    Haptics.selectionAsync();
+    if (currentStep < 3) {
+      setCurrentStep((prev) => (prev + 1) as 1 | 2 | 3);
     }
   };
 
-  const finishDictation = (target: 'trigger' | 'urge') => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    stopListening();
-    setIsRecordingSTT(false);
-    setSttStatusMessage('Transcribed!');
-    setTimeout(() => setSttStatusMessage(''), 1500);
+  const prevStep = () => {
+    Haptics.selectionAsync();
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3);
+    } else {
+      onClose();
+    }
+  };
+
+  const toggleSomatic = (item: string) => {
+    Haptics.selectionAsync();
+    if (somaticSensations.includes(item)) {
+      setSomaticSensations(somaticSensations.filter((s) => s !== item));
+    } else {
+      setSomaticSensations([...somaticSensations, item]);
+    }
+  };
+
+  const toggleWho = (item: string) => {
+    Haptics.selectionAsync();
+    if (contextWho.includes(item)) {
+      setContextWho(contextWho.filter((w) => w !== item));
+    } else {
+      setContextWho([...contextWho, item]);
+    }
+  };
+
+  const toggleWhere = (item: string) => {
+    Haptics.selectionAsync();
+    setContextWhere(contextWhere === item ? '' : item);
   };
 
   const handleSave = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (isRecordingSTT) {
-      stopListening();
-    }
 
     const checkInToSave: CheckIn = {
       id: initialCheckIn ? initialCheckIn.id : `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -167,10 +130,10 @@ export const MicroCheckInModal: React.FC<Props> = ({
       intensity,
       somaticSensations,
       contextWho,
-      contextWhat,
+      contextWhat: [],
       contextWhere: contextWhere || undefined,
-      triggerNote: triggerNote.trim() || undefined,
-      urgeNote: urgeNote.trim() || undefined,
+      triggerNote: reasonNote.trim() || undefined,
+      urgeNote: undefined,
       createdAt: initialCheckIn ? initialCheckIn.createdAt : Date.now(),
     };
 
@@ -185,201 +148,366 @@ export const MicroCheckInModal: React.FC<Props> = ({
     setIntensity(7);
     setSomaticSensations([]);
     setContextWho([]);
-    setContextWhat([]);
     setContextWhere('');
-    setTriggerNote('');
-    setUrgeNote('');
-    setFocusedField(null);
-    setIsRecordingSTT(false);
-    setSttStatusMessage('');
+    setReasonNote('');
+    setCurrentStep(1);
   };
 
+  const emotionsList = EMOTIONS[quadrant] || [];
+
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={styles.safeArea}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardContainer}
         >
-          {/* Top Modal Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.cancelText}>Cancel</Text>
+          {/* Top Bar: single X in top right corner, Back button if step > 1 */}
+          <View style={styles.topBar}>
+            {currentStep > 1 ? (
+              <TouchableOpacity
+                onPress={prevStep}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.backBtn}
+              >
+                <Text style={[styles.backBtnText, { color: theme.textMuted }]}>‹ Back</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.backBtnPlaceholder} />
+            )}
+
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.closeBtn}
+            >
+              <Text style={[styles.closeBtnText, { color: theme.textSubtle }]}>✕</Text>
             </TouchableOpacity>
-            <View style={styles.titleContainer}>
-              <Text style={styles.headerTitle}>
-                {initialCheckIn ? 'Edit Check-In' : 'Micro Check-In'}
-              </Text>
-              <Text style={styles.headerSubtitle}>
-                {initialCheckIn ? 'Update your reflection' : '< 30 Seconds'}
-              </Text>
-            </View>
-            <View style={styles.headerRightSpacer} />
           </View>
 
-          {/* Scrollable Form Body */}
+          {/* Step Content */}
           <ScrollView
             style={styles.scrollContainer}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* 1. Yale Mood Meter Quadrant */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>1. Quadrant</Text>
-              <QuadrantSelector selectedQuadrant={quadrant} onSelect={handleQuadrantChange} />
-            </View>
+            {/* STEP 1: What are you feeling right now? */}
+            {currentStep === 1 && (
+              <View style={styles.stepContent}>
+                <Text style={[styles.questionTitle, { color: theme.text }]}>
+                  What are you feeling right now?
+                </Text>
 
-            {/* 2. Emotion Picker with Instant Definition */}
-            <View style={styles.section}>
-              <EmotionPicker
-                quadrant={quadrant}
-                selectedEmotion={primaryEmotion}
-                onSelectEmotion={setPrimaryEmotion}
-                intensity={intensity}
-                onChangeIntensity={setIntensity}
-              />
-            </View>
-
-            {/* 3. Somatic Sensations */}
-            <View style={styles.section}>
-              <SomaticSelector
-                selectedSensations={somaticSensations}
-                onChange={setSomaticSensations}
-                accentColor={meta.color}
-              />
-            </View>
-
-            {/* 4. Context Selector (Wife, Activities, Where) */}
-            <View style={styles.section}>
-              <ContextSelector
-                selectedWho={contextWho}
-                onChangeWho={setContextWho}
-                selectedWhat={contextWhat}
-                onChangeWhat={setContextWhat}
-                selectedWhere={contextWhere}
-                onChangeWhere={setContextWhere}
-                accentColor={meta.color}
-              />
-            </View>
-
-            {/* 5. Deep Context Prompts with Instant Speech-to-Text */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>5. Notes & Urges</Text>
-
-              {/* Trigger Input */}
-              <View style={styles.noteFieldWrapper}>
-                <View style={styles.noteFieldHeader}>
-                  <Text style={styles.noteFieldTitle}>What triggered this?</Text>
-                </View>
-                <TextInput
-                  placeholder="e.g., Sudden meeting request, unexpected message..."
-                  placeholderTextColor="#71717A"
-                  value={triggerNote}
-                  onChangeText={setTriggerNote}
-                  onFocus={() => setFocusedField('trigger')}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setFocusedField((curr) => (curr === 'trigger' && !isRecordingSTT ? null : curr));
-                    }, 300);
-                  }}
-                  multiline
-                  style={styles.textInput}
+                {/* Yale How We Feel 2x2 Quadrant Grid */}
+                <QuadrantSelector
+                  selectedQuadrant={quadrant}
+                  onSelect={handleQuadrantChange}
                 />
-                {(focusedField === 'trigger' || (isRecordingSTT && sttTargetField === 'trigger')) && (
-                  <View style={styles.fieldBottomBar}>
-                    {isRecordingSTT && sttTargetField === 'trigger' ? (
-                      <>
-                        <View style={styles.recordingStatusBadge}>
-                          <View style={styles.recordingRedDot} />
-                          <Text style={styles.recordingStatusText}>Listening...</Text>
-                        </View>
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => finishDictation('trigger')}
-                          style={styles.finishDictateBtn}
-                        >
-                          <Text style={styles.finishDictateBtnText}>⏹ Finish</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => startDictation('trigger')}
-                        style={[styles.dictateBtn, { borderColor: meta.color }]}
-                      >
-                        <Text style={styles.dictateBtnText}>🎤 Dictate</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
 
-              {/* Urge Input */}
-              <View style={[styles.noteFieldWrapper, { marginTop: 10 }]}>
-                <View style={styles.noteFieldHeader}>
-                  <Text style={styles.noteFieldTitle}>What urges or behaviors do you notice?</Text>
+                {/* Emotion Vocabulary Chips: Highlight only, no dot */}
+                <View style={styles.sectionHeaderSpacing}>
+                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
+                    SELECT EMOTION
+                  </Text>
                 </View>
-                <TextInput
-                  placeholder="e.g., Urge to scroll, urge to withdraw, urge to pace..."
-                  placeholderTextColor="#71717A"
-                  value={urgeNote}
-                  onChangeText={setUrgeNote}
-                  onFocus={() => setFocusedField('urge')}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setFocusedField((curr) => (curr === 'urge' && !isRecordingSTT ? null : curr));
-                    }, 300);
-                  }}
-                  multiline
-                  style={styles.textInput}
-                />
-                {(focusedField === 'urge' || (isRecordingSTT && sttTargetField === 'urge')) && (
-                  <View style={styles.fieldBottomBar}>
-                    {isRecordingSTT && sttTargetField === 'urge' ? (
-                      <>
-                        <View style={styles.recordingStatusBadge}>
-                          <View style={styles.recordingRedDot} />
-                          <Text style={styles.recordingStatusText}>Listening...</Text>
-                        </View>
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => finishDictation('urge')}
-                          style={styles.finishDictateBtn}
-                        >
-                          <Text style={styles.finishDictateBtnText}>⏹ Finish</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => startDictation('urge')}
-                        style={[styles.dictateBtn, { borderColor: meta.color }]}
-                      >
-                        <Text style={styles.dictateBtnText}>🎤 Dictate</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
 
-              {sttStatusMessage ? (
-                <Text style={styles.sttStatusText}>{sttStatusMessage}</Text>
-              ) : null}
-            </View>
+                <View style={styles.chipsWrap}>
+                  {emotionsList.map((item) => {
+                    const isSelected = primaryEmotion.toLowerCase() === item.name.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setPrimaryEmotion(item.name);
+                        }}
+                        style={[
+                          styles.chip,
+                          isSelected
+                            ? {
+                                backgroundColor: qMeta.subtleBg,
+                                borderColor: qMeta.color,
+                                borderWidth: 1.5,
+                              }
+                            : {
+                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+                                borderWidth: 1,
+                              },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.chipText,
+                            {
+                              color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
+                              fontWeight: isSelected ? '700' : '500',
+                            },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {/* STEP 2: Where are you feeling this? */}
+            {currentStep === 2 && (
+              <View style={styles.stepContent}>
+                <Text style={[styles.questionTitle, { color: theme.text }]}>
+                  Where are you feeling this?
+                </Text>
+
+                {/* Intensity 1–10 Selector Strip */}
+                <View style={styles.subSection}>
+                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
+                    INTENSITY ({intensity}/10)
+                  </Text>
+                  <View style={styles.intensityStrip}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+                      const isSelected = intensity === num;
+                      return (
+                        <TouchableOpacity
+                          key={num}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setIntensity(num);
+                          }}
+                          style={[
+                            styles.intensityNumberBtn,
+                            isSelected
+                              ? {
+                                  backgroundColor: qMeta.subtleBg,
+                                  borderColor: qMeta.color,
+                                  borderWidth: 1.5,
+                                }
+                              : {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+                                  borderWidth: 1,
+                                },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.intensityNumberText,
+                              {
+                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textMuted,
+                                fontWeight: isSelected ? '800' : '600',
+                              },
+                            ]}
+                          >
+                            {num}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Body Area */}
+                <View style={styles.subSection}>
+                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
+                    BODY AREA
+                  </Text>
+                  <View style={styles.chipsWrap}>
+                    {SOMATIC_SENSATIONS.map((area) => {
+                      const isSelected = somaticSensations.includes(area);
+                      return (
+                        <TouchableOpacity
+                          key={area}
+                          activeOpacity={0.8}
+                          onPress={() => toggleSomatic(area)}
+                          style={[
+                            styles.chip,
+                            isSelected
+                              ? {
+                                  backgroundColor: qMeta.subtleBg,
+                                  borderColor: qMeta.color,
+                                  borderWidth: 1.5,
+                                }
+                              : {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+                                  borderWidth: 1,
+                                },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              {
+                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
+                                fontWeight: isSelected ? '700' : '500',
+                              },
+                            ]}
+                          >
+                            {area}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Company */}
+                <View style={styles.subSection}>
+                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
+                    COMPANY
+                  </Text>
+                  <View style={styles.chipsWrap}>
+                    {CONTEXT_WHO.map((person) => {
+                      const isSelected = contextWho.includes(person);
+                      return (
+                        <TouchableOpacity
+                          key={person}
+                          activeOpacity={0.8}
+                          onPress={() => toggleWho(person)}
+                          style={[
+                            styles.chip,
+                            isSelected
+                              ? {
+                                  backgroundColor: qMeta.subtleBg,
+                                  borderColor: qMeta.color,
+                                  borderWidth: 1.5,
+                                }
+                              : {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+                                  borderWidth: 1,
+                                },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              {
+                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
+                                fontWeight: isSelected ? '700' : '500',
+                              },
+                            ]}
+                          >
+                            {person}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Setting */}
+                <View style={styles.subSection}>
+                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
+                    SETTING
+                  </Text>
+                  <View style={styles.chipsWrap}>
+                    {CONTEXT_WHERE.map((loc) => {
+                      const isSelected = contextWhere === loc;
+                      return (
+                        <TouchableOpacity
+                          key={loc}
+                          activeOpacity={0.8}
+                          onPress={() => toggleWhere(loc)}
+                          style={[
+                            styles.chip,
+                            isSelected
+                              ? {
+                                  backgroundColor: qMeta.subtleBg,
+                                  borderColor: qMeta.color,
+                                  borderWidth: 1.5,
+                                }
+                              : {
+                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+                                  borderWidth: 1,
+                                },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              {
+                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
+                                fontWeight: isSelected ? '700' : '500',
+                              },
+                            ]}
+                          >
+                            {loc}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* STEP 3: Why are you feeling this? */}
+            {currentStep === 3 && (
+              <View style={styles.stepContent}>
+                <Text style={[styles.questionTitle, { color: theme.text }]}>
+                  Why are you feeling this?
+                </Text>
+
+                <View
+                  style={[
+                    styles.textAreaWrapper,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+                    },
+                  ]}
+                >
+                  <TextInput
+                    placeholder="Write a few thoughts on what brought this moment on..."
+                    placeholderTextColor={theme.textSubtle}
+                    value={reasonNote}
+                    onChangeText={setReasonNote}
+                    multiline
+                    autoFocus
+                    numberOfLines={6}
+                    style={[
+                      styles.textAreaInput,
+                      {
+                        color: theme.text,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            )}
           </ScrollView>
 
-          {/* Sticky Bottom Save Action Bar */}
-          <View style={styles.bottomBar}>
-            <TouchableOpacity
-              onPress={handleSave}
-              style={[styles.saveBtn, { backgroundColor: meta.color }]}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.saveBtnText}>
-                {initialCheckIn ? 'Update Check-In' : 'Save Check-In'}
-              </Text>
-            </TouchableOpacity>
+          {/* Bottom Action Button */}
+          <View style={[styles.bottomBar, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border }]}>
+            {currentStep < 3 ? (
+              <TouchableOpacity
+                onPress={nextStep}
+                style={[styles.primaryActionBtn, { backgroundColor: qMeta.color }]}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryActionBtnText}>Continue →</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleSave}
+                style={[styles.primaryActionBtn, { backgroundColor: qMeta.color }]}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryActionBtnText}>Save Entry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -390,185 +518,135 @@ export const MicroCheckInModal: React.FC<Props> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#09090B',
   },
   keyboardContainer: {
     flex: 1,
   },
-  header: {
-    height: 52,
+  topBar: {
+    height: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#27272A',
   },
-  cancelText: {
-    color: '#A1A1AA',
-    fontSize: 14,
-    fontWeight: '500',
+  backBtn: {
+    minWidth: 60,
+    justifyContent: 'center',
   },
-  titleContainer: {
-    alignItems: 'center',
+  backBtnPlaceholder: {
+    minWidth: 60,
   },
-  headerTitle: {
-    color: '#F4F4F5',
-    fontSize: 14,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  backBtnText: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  headerSubtitle: {
-    color: '#71717A',
-    fontSize: 10,
-    fontWeight: '500',
+  closeBtn: {
+    minWidth: 40,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
-  headerRightSpacer: {
-    width: 44,
+  closeBtnText: {
+    fontSize: 18,
+    fontWeight: '600',
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 28,
   },
-  section: {
-    marginBottom: 14,
+  stepContent: {
+    flex: 1,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+  questionTitle: {
+    fontFamily: 'serif',
+    fontSize: 24,
+    fontWeight: '400',
+    lineHeight: 32,
+    letterSpacing: -0.3,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '800',
+  sectionHeaderSpacing: {
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  subSection: {
+    marginBottom: 20,
+  },
+  subheadingMono: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    color: '#D4D4D8',
-    marginBottom: 4,
+    marginBottom: 10,
   },
-  quadrantIndicator: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  noteFieldWrapper: {
-    backgroundColor: '#18181B',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#27272A',
-    padding: 10,
-  },
-  noteFieldHeader: {
+  chipsWrap: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  noteFieldTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#A1A1AA',
-    flexShrink: 1,
-  },
-  fieldBottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  dictateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  chip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#27272A',
-    borderWidth: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
-  dictateBtnText: {
+  chipText: {
+    fontFamily: 'monospace',
     fontSize: 12,
-    fontWeight: '700',
-    color: '#F4F4F5',
+    letterSpacing: 0.3,
   },
-  recordingStatusBadge: {
+  intensityStrip: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginRight: 'auto',
+    gap: 4,
+    justifyContent: 'space-between',
   },
-  recordingRedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-  },
-  recordingStatusText: {
-    fontSize: 12,
-    color: '#EF4444',
-    fontWeight: '700',
-  },
-  finishDictateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  intensityNumberBtn: {
+    flex: 1,
+    height: 38,
     borderRadius: 8,
-    backgroundColor: '#EF4444',
-  },
-  finishDictateBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  textInput: {
-    minHeight: 48,
-    color: '#F4F4F5',
-    fontSize: 12,
-    lineHeight: 18,
-    textAlignVertical: 'top',
-  },
-  sttStatusText: {
-    fontSize: 10,
-    color: '#FBBF24',
-    marginTop: 6,
-    fontWeight: '600',
-  },
-  privacyNote: {
-    fontSize: 9,
-    color: '#71717A',
-    marginTop: 6,
-    lineHeight: 13,
-  },
-  bottomBar: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#27272A',
-    backgroundColor: '#09090B',
-  },
-  saveBtn: {
-    height: 48,
-    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
-  saveBtnText: {
+  intensityNumberText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+  },
+  textAreaWrapper: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    minHeight: 140,
+  },
+  textAreaInput: {
+    fontFamily: 'serif',
+    fontSize: 16,
+    lineHeight: 24,
+    textAlignVertical: 'top',
+    minHeight: 120,
+  },
+  bottomBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+  },
+  primaryActionBtn: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryActionBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'monospace',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
+
+
