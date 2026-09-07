@@ -154,6 +154,9 @@ export const MicroCheckInModal: React.FC<Props> = ({
   };
 
   const emotionsList = EMOTIONS[quadrant] || [];
+  const selectedEmotionItem = emotionsList.find(
+    (e) => e.name.toLowerCase() === primaryEmotion.toLowerCase()
+  );
 
   return (
     <Modal
@@ -216,6 +219,32 @@ export const MicroCheckInModal: React.FC<Props> = ({
                     SELECT EMOTION
                   </Text>
                 </View>
+
+                {/* Selected Emotion Definition */}
+                {selectedEmotionItem && (
+                  <View
+                    style={[
+                      styles.definitionCard,
+                      {
+                        backgroundColor: qMeta.subtleBg,
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.border,
+                        borderLeftColor: qMeta.color,
+                      },
+                    ]}
+                  >
+                    <View style={styles.definitionHeader}>
+                      <Text style={[styles.definitionWord, { color: isDark ? '#FFFFFF' : theme.text }]}>
+                        {selectedEmotionItem.name}
+                      </Text>
+                      <Text style={[styles.definitionTag, { color: qMeta.color }]}>
+                        {selectedEmotionItem.energy.toUpperCase()} ENERGY · {selectedEmotionItem.pleasantness.toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.definitionText, { color: theme.textSecondary }]}>
+                      {selectedEmotionItem.definition}
+                    </Text>
+                  </View>
+                )}
 
                 <View style={styles.chipsWrap}>
                   {emotionsList.map((item) => {
@@ -598,6 +627,39 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 12,
     letterSpacing: 0.3,
+  },
+  definitionCard: {
+    marginTop: 6,
+    marginBottom: 14,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderLeftWidth: 3,
+  },
+  definitionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  definitionWord: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  definitionTag: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  definitionText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    lineHeight: 18,
   },
   intensityStrip: {
     flexDirection: 'row',
