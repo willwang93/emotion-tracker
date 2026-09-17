@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -6,9 +6,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { ReminderSetting } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
 
@@ -25,7 +26,7 @@ function parseTimeDisplay(t: string): string {
   const m = parseInt(mStr, 10) || 0;
   const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 export const ReminderModal: React.FC<Props> = ({
@@ -38,26 +39,79 @@ export const ReminderModal: React.FC<Props> = ({
   const [times, setTimes] = useState<string[]>(setting.times || []);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // Quick picker state
-  const [pickerHour, setPickerHour] = useState<number>(9);
-  const [pickerMinute, setPickerMinute] = useState<number>(0);
+  const minuteInputRef = useRef<TextInput>(null);
+
+  // Time editing state
+  const [pickerHourText, setPickerHourText] = useState<string>('09');
+  const [pickerMinuteText, setPickerMinuteText] = useState<string>('00');
   const [pickerPeriod, setPickerPeriod] = useState<'AM' | 'PM'>('AM');
+  const [focusedField, setFocusedField] = useState<'hour' | 'minute' | null>(null);
+
+  // Keep times state synchronized whenever setting prop updates from database
+  useEffect(() => {
+    if (setting?.times) {
+      setTimes(setting.times);
+    }
+  }, [setting.times]);
+
+  // When modal becomes visible, reset times from latest setting and clear editing
+  useEffect(() => {
+    if (visible) {
+      setTimes(setting.times || []);
+      setEditingIndex(null);
+      setFocusedField(null);
+    }
+  }, [visible]);
 
   const openPickerForIndex = (idx: number) => {
-    Haptics.selectionAsync();
+    if (editingIndex === idx) {
+      setEditingIndex(null);
+      return;
+    }
     const t = times[idx] || '09:00';
     const [hStr, mStr] = t.split(':');
     const h = parseInt(hStr, 10) || 0;
     const m = parseInt(mStr, 10) || 0;
     setPickerPeriod(h >= 12 ? 'PM' : 'AM');
     const h12 = h % 12 === 0 ? 12 : h % 12;
-    setPickerHour(h12);
-    setPickerMinute(m);
+    setPickerHourText(String(h12));
+    setPickerMinuteText(String(m).padStart(2, '0'));
     setEditingIndex(idx);
   };
 
+  const handleHourChange = (val: string) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    setPickerHourText(cleaned);
+    const num = parseInt(cleaned, 10);
+    if (cleaned.length === 2 || (num >= 2 && num <= 9 && cleaned.length === 1)) {
+      minuteInputRef.current?.focus();
+    }
+  };
+
+  const handleHourBlur = () => {
+    setFocusedField(null);
+    let num = parseInt(pickerHourText, 10);
+    if (isNaN(num) || num < 1) num = 12;
+    if (num > 12) num = 12;
+    setPickerHourText(String(num));
+  };
+
+  const handleMinuteChange = (val: string) => {
+    const cleaned = val.replace(/[^0-9]/g, '');
+    if (cleaned.length <= 2) {
+      setPickerMinuteText(cleaned);
+    }
+  };
+
+  const handleMinuteBlur = () => {
+    setFocusedField(null);
+    let num = parseInt(pickerMinuteText, 10);
+    if (isNaN(num) || num < 0) num = 0;
+    if (num > 59) num = 59;
+    setPickerMinuteText(String(num).padStart(2, '0'));
+  };
+
   const handleAddNewTime = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     let hour = 12;
     let newTime = '12:00';
     while (times.includes(newTime) && hour < 23) {
@@ -66,11 +120,17 @@ export const ReminderModal: React.FC<Props> = ({
     }
     const updated = [...times, newTime];
     setTimes(updated);
-    openPickerForIndex(updated.length - 1);
+    setPickerPeriod('PM');
+    setPickerHourText(String(hour > 12 ? hour - 12 : hour));
+    setPickerMinuteText('00');
+    setEditingIndex(updated.length - 1);
+    onSaveSettings({
+      ...setting,
+      times: updated,
+    });
   };
 
   const handleDeleteTime = (idx: number) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     const updated = times.filter((_, i) => i !== idx);
     setTimes(updated);
     if (editingIndex === idx) {
@@ -86,14 +146,23 @@ export const ReminderModal: React.FC<Props> = ({
 
   const handleSavePickerTime = () => {
     if (editingIndex === null) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    let h24 = pickerHour;
+
+    let h = parseInt(pickerHourText, 10);
+    if (isNaN(h) || h < 1) h = 12;
+    if (h > 12) h = 12;
+
+    let m = parseInt(pickerMinuteText, 10);
+    if (isNaN(m) || m < 0) m = 0;
+    if (m > 59) m = 59;
+
+    let h24 = h;
     if (pickerPeriod === 'PM') {
-      h24 = pickerHour === 12 ? 12 : pickerHour + 12;
+      h24 = h === 12 ? 12 : h + 12;
     } else {
-      h24 = pickerHour === 12 ? 0 : pickerHour;
+      h24 = h === 12 ? 0 : h;
     }
-    const formatted = `${String(h24).padStart(2, '0')}:${String(pickerMinute).padStart(2, '0')}`;
+
+    const formatted = `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     const updated = [...times];
     updated[editingIndex] = formatted;
     setTimes(updated);
@@ -106,10 +175,30 @@ export const ReminderModal: React.FC<Props> = ({
   };
 
   const handleDone = () => {
-    Haptics.selectionAsync();
+    let currentTimes = times;
+    if (editingIndex !== null) {
+      let h = parseInt(pickerHourText, 10);
+      if (isNaN(h) || h < 1) h = 12;
+      if (h > 12) h = 12;
+
+      let m = parseInt(pickerMinuteText, 10);
+      if (isNaN(m) || m < 0) m = 0;
+      if (m > 59) m = 59;
+
+      let h24 = h;
+      if (pickerPeriod === 'PM') {
+        h24 = h === 12 ? 12 : h + 12;
+      } else {
+        h24 = h === 12 ? 0 : h;
+      }
+
+      const formatted = `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      currentTimes = [...times];
+      currentTimes[editingIndex] = formatted;
+    }
     onSaveSettings({
       ...setting,
-      times,
+      times: currentTimes,
     });
     onClose();
   };
@@ -123,13 +212,13 @@ export const ReminderModal: React.FC<Props> = ({
     >
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         {/* Top Masthead */}
-        <View style={[styles.topBar, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border }]}>
-          <Text style={[styles.modalTitle, { color: theme.text }]}>Preferences</Text>
+        <View style={styles.topBar}>
+          <Text style={[styles.modalTitle, { color: theme.text }]}>Settings</Text>
           <TouchableOpacity
             onPress={handleDone}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={[styles.doneBtnText, { color: theme.text }]}>Done</Text>
+            <Text style={[styles.doneBtnText, { color: theme.textMuted }]}>Done</Text>
           </TouchableOpacity>
         </View>
 
@@ -137,189 +226,233 @@ export const ReminderModal: React.FC<Props> = ({
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Section: Reflection reminders */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionHeading, { color: theme.textSubtle }]}>
-              REFLECTION REMINDERS
-            </Text>
-            <Text style={[styles.sectionDesc, { color: theme.textMuted }]}>
-              Quiet daily check-in nudges delivered to your lockscreen.
-            </Text>
+          {/* Settings Card */}
+          <View
+            style={[
+              styles.settingsCard,
+              {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            {/* Master Toggle Row */}
+            <View style={styles.masterToggleRow}>
+              <Text style={[styles.masterToggleText, { color: theme.text }]}>
+                Daily Reminders
+              </Text>
+              <Switch
+                value={setting.enabled}
+                onValueChange={(val) => onSaveSettings({ ...setting, enabled: val })}
+                thumbColor={setting.enabled ? '#F59E0B' : undefined}
+                trackColor={{ false: theme.border, true: 'rgba(245, 158, 11, 0.4)' }}
+              />
+            </View>
 
-            {/* List of Reminder Time Chips with Delete '✕' Button */}
+            <View style={[styles.cardDivider, { backgroundColor: theme.border }]} />
+
+            {/* List of Reminder Time Rows */}
             <View style={styles.timesContainer}>
               {times.map((t, idx) => {
                 const isSelected = editingIndex === idx;
                 return (
-                  <View
-                    key={`${t}-${idx}`}
-                    style={[
-                      styles.timeChip,
-                      {
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                        borderColor: isSelected
-                          ? theme.text
-                          : isDark
-                          ? 'rgba(255, 255, 255, 0.08)'
-                          : theme.border,
-                      },
-                    ]}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => openPickerForIndex(idx)}
-                      style={styles.timeChipLabelBtn}
-                    >
-                      <Text style={[styles.timeChipText, { color: theme.text }]}>
-                        {parseTimeDisplay(t)}
+                  <View key={`${t}-${idx}`} style={styles.reminderRowWrapper}>
+                    <View style={styles.reminderRow}>
+                      <Text style={[styles.reminderLabel, { color: theme.textSecondary }]}>
+                        Reminder {idx + 1}
                       </Text>
-                    </TouchableOpacity>
 
-                    {/* Delete '✕' Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => handleDeleteTime(idx)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      style={styles.deleteChipBtn}
-                    >
-                      <Text style={[styles.deleteChipText, { color: theme.textMuted }]}>✕</Text>
-                    </TouchableOpacity>
+                      <View style={styles.reminderRightActions}>
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          onPress={() => openPickerForIndex(idx)}
+                          style={[
+                            styles.timePillBtn,
+                            {
+                              backgroundColor: theme.chipBg,
+                              borderColor: isSelected
+                                ? theme.text
+                                : theme.border,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.timePillText, { color: theme.text }]}>
+                            {parseTimeDisplay(t)}
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => handleDeleteTime(idx)}
+                          hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
+                          style={styles.deleteBtn}
+                        >
+                          <Text style={[styles.deleteBtnText, { color: theme.textMuted }]}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Inline Time Editor if this item is selected */}
+                    {isSelected && (
+                      <View
+                        style={[
+                          styles.editorCard,
+                          {
+                            backgroundColor: theme.surfaceElevated,
+                            borderColor: theme.border,
+                          },
+                        ]}
+                      >
+                        <View style={styles.editorRow}>
+                          {/* Hour Input */}
+                          <View style={styles.inputCol}>
+                            <Text style={[styles.pickerColLabel, { color: theme.textMuted }]}>HOUR</Text>
+                            <TextInput
+                              style={[
+                                styles.directTimeInput,
+                                {
+                                  color: theme.text,
+                                  backgroundColor: theme.surface,
+                                  borderColor:
+                                    focusedField === 'hour'
+                                      ? theme.text
+                                      : theme.border,
+                                  borderWidth: focusedField === 'hour' ? 2 : 1,
+                                },
+                              ]}
+                              value={pickerHourText}
+                              onChangeText={handleHourChange}
+                              onFocus={() => setFocusedField('hour')}
+                              onBlur={handleHourBlur}
+                              keyboardType="number-pad"
+                              maxLength={2}
+                              selectTextOnFocus
+                              returnKeyType="next"
+                              onSubmitEditing={() => minuteInputRef.current?.focus()}
+                            />
+                          </View>
+
+                          <Text style={[styles.colonSeparator, { color: theme.textMuted }]}>:</Text>
+
+                          {/* Minute Input */}
+                          <View style={styles.inputCol}>
+                            <Text style={[styles.pickerColLabel, { color: theme.textMuted }]}>MIN</Text>
+                            <TextInput
+                              ref={minuteInputRef}
+                              style={[
+                                styles.directTimeInput,
+                                {
+                                  color: theme.text,
+                                  backgroundColor: theme.surface,
+                                  borderColor:
+                                    focusedField === 'minute'
+                                      ? theme.text
+                                      : theme.border,
+                                  borderWidth: focusedField === 'minute' ? 2 : 1,
+                                },
+                              ]}
+                              value={pickerMinuteText}
+                              onChangeText={handleMinuteChange}
+                              onFocus={() => setFocusedField('minute')}
+                              onBlur={handleMinuteBlur}
+                              keyboardType="number-pad"
+                              maxLength={2}
+                              selectTextOnFocus
+                              returnKeyType="done"
+                              onSubmitEditing={handleSavePickerTime}
+                            />
+                          </View>
+
+                          {/* Period Selector */}
+                          <View style={styles.periodCol}>
+                            <Text style={[styles.pickerColLabel, { color: theme.textMuted }]}>PERIOD</Text>
+                            <View style={styles.periodToggleRow}>
+                              {(['AM', 'PM'] as const).map((p) => {
+                                const isPActive = pickerPeriod === p;
+                                return (
+                                  <TouchableOpacity
+                                    key={p}
+                                    onPress={() => setPickerPeriod(p)}
+                                    style={[
+                                      styles.periodBtn,
+                                      isPActive
+                                        ? { backgroundColor: theme.text }
+                                        : {
+                                            borderColor: theme.border,
+                                            borderWidth: 1,
+                                            backgroundColor: theme.surface,
+                                          },
+                                    ]}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.periodBtnText,
+                                        {
+                                          color: isPActive
+                                            ? isDark
+                                              ? '#000000'
+                                              : '#FFFFFF'
+                                            : theme.textMuted,
+                                        },
+                                      ]}
+                                    >
+                                      {p}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Actions */}
+                        <View style={styles.editorActionRow}>
+                          <TouchableOpacity
+                            onPress={() => setEditingIndex(null)}
+                            style={[
+                              styles.cancelEditorBtn,
+                              {
+                                borderColor: theme.border,
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.cancelEditorBtnText, { color: theme.textMuted }]}>
+                              Cancel
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={handleSavePickerTime}
+                            style={[styles.saveTimeBtn, { backgroundColor: theme.text }]}
+                          >
+                            <Text style={[styles.saveTimeBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
+                              Save Time
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 );
               })}
             </View>
 
-            {/* Inline Time Editor if an item is selected */}
-            {editingIndex !== null && (
-              <View
-                style={[
-                  styles.editorCard,
-                  {
-                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : theme.border,
-                  },
-                ]}
-              >
-                <Text style={[styles.editorTitle, { color: theme.textSubtle }]}>
-                  EDIT TIME ({editingIndex + 1})
-                </Text>
+            <View style={[styles.cardDivider, { backgroundColor: theme.border }]} />
 
-                <View style={styles.pickerRow}>
-                  {/* Hour Selector */}
-                  <View style={styles.pickerCol}>
-                    <Text style={[styles.pickerColLabel, { color: theme.textSubtle }]}>HOUR</Text>
-                    <View style={styles.stepperRow}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          setPickerHour((prev) => (prev === 1 ? 12 : prev - 1));
-                        }}
-                        style={[styles.stepperBtn, { borderColor: theme.border }]}
-                      >
-                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
-                      </TouchableOpacity>
-                      <Text style={[styles.stepperVal, { color: theme.text }]}>
-                        {String(pickerHour).padStart(2, '0')}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          setPickerHour((prev) => (prev === 12 ? 1 : prev + 1));
-                        }}
-                        style={[styles.stepperBtn, { borderColor: theme.border }]}
-                      >
-                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {/* Minute Selector */}
-                  <View style={styles.pickerCol}>
-                    <Text style={[styles.pickerColLabel, { color: theme.textSubtle }]}>MINUTE</Text>
-                    <View style={styles.stepperRow}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          setPickerMinute((prev) => (prev === 0 ? 45 : prev - 15));
-                        }}
-                        style={[styles.stepperBtn, { borderColor: theme.border }]}
-                      >
-                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>−</Text>
-                      </TouchableOpacity>
-                      <Text style={[styles.stepperVal, { color: theme.text }]}>
-                        {String(pickerMinute).padStart(2, '0')}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          setPickerMinute((prev) => (prev === 45 ? 0 : prev + 15));
-                        }}
-                        style={[styles.stepperBtn, { borderColor: theme.border }]}
-                      >
-                        <Text style={[styles.stepperBtnText, { color: theme.text }]}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {/* Period Selector */}
-                  <View style={styles.pickerCol}>
-                    <Text style={[styles.pickerColLabel, { color: theme.textSubtle }]}>PERIOD</Text>
-                    <View style={styles.periodToggleRow}>
-                      {(['AM', 'PM'] as const).map((p) => {
-                        const isPActive = pickerPeriod === p;
-                        return (
-                          <TouchableOpacity
-                            key={p}
-                            onPress={() => {
-                              Haptics.selectionAsync();
-                              setPickerPeriod(p);
-                            }}
-                            style={[
-                              styles.periodBtn,
-                              isPActive
-                                ? { backgroundColor: theme.text }
-                                : { borderColor: theme.border, borderWidth: 1 },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.periodBtnText,
-                                { color: isPActive ? (isDark ? '#000000' : '#FFFFFF') : theme.textMuted },
-                              ]}
-                            >
-                              {p}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  onPress={handleSavePickerTime}
-                  style={[styles.saveTimeBtn, { backgroundColor: theme.text }]}
-                >
-                  <Text style={[styles.saveTimeBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-                    Save Time
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* + Add Time Button */}
+            {/* + Add reminder Button */}
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleAddNewTime}
               style={[
                 styles.addTimeBtn,
                 {
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.border,
+                  borderColor: theme.borderFocus,
                 },
               ]}
             >
-              <Text style={[styles.addTimeBtnText, { color: theme.text }]}>+ Add Time</Text>
+              <Text style={[styles.addTimeBtnText, { color: theme.textMuted }]}>+ Add reminder</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -337,140 +470,120 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 24,
   },
   modalTitle: {
     fontFamily: 'serif',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '400',
     letterSpacing: -0.3,
   },
   doneBtnText: {
-    fontFamily: 'monospace',
     fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '500',
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
+    padding: 24,
+  },
+  settingsCard: {
+    borderRadius: 24,
+    borderWidth: 1,
     padding: 20,
   },
-  section: {
-    marginBottom: 28,
+  masterToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
   },
-  sectionHeading: {
-    fontFamily: 'monospace',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  sectionDesc: {
-    fontFamily: 'serif',
+  masterToggleText: {
     fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
+    fontWeight: '600',
+  },
+  cardDivider: {
+    height: 1,
+    marginVertical: 14,
   },
   timesContainer: {
+    gap: 12,
+  },
+  reminderRowWrapper: {
+    gap: 8,
+  },
+  reminderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reminderLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  reminderRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timePillBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  timePillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  deleteBtn: {
+    padding: 6,
+  },
+  deleteBtnText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  editorCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  editorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     marginBottom: 12,
   },
-  timeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  timeChipLabelBtn: {
-    flex: 1,
-  },
-  timeChipText: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  deleteChipBtn: {
-    padding: 6,
-  },
-  deleteChipText: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  addTimeBtn: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  addTimeBtnText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  editorCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-  },
-  editorTitle: {
-    fontFamily: 'monospace',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  pickerCol: {
-    flex: 1,
+  inputCol: {
+    width: 56,
   },
   pickerColLabel: {
-    fontFamily: 'monospace',
     fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 6,
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stepperBtn: {
-    width: 28,
-    height: 32,
-    borderRadius: 6,
+  directTimeInput: {
+    height: 38,
+    borderRadius: 8,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperBtnText: {
-    fontFamily: 'monospace',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  stepperVal: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    fontWeight: '700',
+  colonSeparator: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 14,
+  },
+  periodCol: {
+    flex: 1,
+    marginLeft: 4,
   },
   periodToggleRow: {
     flexDirection: 'row',
@@ -478,28 +591,53 @@ const styles = StyleSheet.create({
   },
   periodBtn: {
     flex: 1,
-    height: 32,
-    borderRadius: 6,
+    height: 38,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   periodBtnText: {
-    fontFamily: 'monospace',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  editorActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cancelEditorBtn: {
+    flex: 1,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelEditorBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   saveTimeBtn: {
-    height: 40,
-    borderRadius: 10,
+    flex: 1.5,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveTimeBtnText: {
-    fontFamily: 'monospace',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  addTimeBtn: {
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addTimeBtnText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

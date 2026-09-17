@@ -2,13 +2,34 @@ import * as SQLite from 'expo-sqlite';
 import { CheckIn, ReminderSetting } from '../types';
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
+let isInitialized = false;
 
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (!dbInstance) {
+export async function getDatabase(forceNew = false): Promise<SQLite.SQLiteDatabase> {
+  if (!dbInstance || forceNew) {
     dbInstance = await SQLite.openDatabaseAsync('emotion_tracker.db');
-    await initDatabase(dbInstance);
+    if (!isInitialized || forceNew) {
+      try {
+        await initDatabase(dbInstance);
+        isInitialized = true;
+      } catch (e: any) {
+        console.log('initDatabase notice:', e?.message || e);
+      }
+    }
   }
   return dbInstance;
+}
+
+export async function withDb<T>(operation: (db: SQLite.SQLiteDatabase) => Promise<T>): Promise<T> {
+  try {
+    const db = await getDatabase();
+    return await operation(db);
+  } catch (err: any) {
+    console.log('withDb attempting retry after error:', err?.message || err);
+    dbInstance = null;
+    isInitialized = false;
+    const newDb = await getDatabase(true);
+    return await operation(newDb);
+  }
 }
 
 export function getDatabaseSync(): SQLite.SQLiteDatabase {
@@ -114,137 +135,165 @@ function mapRowToCheckIn(row: any): CheckIn {
 }
 
 export async function insertCheckIn(checkIn: CheckIn): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    `INSERT INTO check_ins (
-      id, timestamp, quadrant, energy_level, pleasantness_level,
-      primary_emotion, intensity, somatic_sensations, context_who,
-      context_what, context_where, trigger_note, urge_note, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-    [
-      checkIn.id,
-      checkIn.timestamp,
-      checkIn.quadrant,
-      checkIn.energyLevel,
-      checkIn.pleasantnessLevel,
-      checkIn.primaryEmotion,
-      checkIn.intensity,
-      JSON.stringify(checkIn.somaticSensations || []),
-      JSON.stringify(checkIn.contextWho || []),
-      JSON.stringify(checkIn.contextWhat || []),
-      checkIn.contextWhere || null,
-      checkIn.triggerNote || null,
-      checkIn.urgeNote || null,
-      checkIn.createdAt,
-    ]
-  );
+  return withDb(async (db) => {
+    await db.runAsync(
+      `INSERT INTO check_ins (
+        id, timestamp, quadrant, energy_level, pleasantness_level,
+        primary_emotion, intensity, somatic_sensations, context_who,
+        context_what, context_where, trigger_note, urge_note, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [
+        checkIn.id,
+        checkIn.timestamp,
+        checkIn.quadrant,
+        checkIn.energyLevel,
+        checkIn.pleasantnessLevel,
+        checkIn.primaryEmotion,
+        checkIn.intensity,
+        JSON.stringify(checkIn.somaticSensations || []),
+        JSON.stringify(checkIn.contextWho || []),
+        JSON.stringify(checkIn.contextWhat || []),
+        checkIn.contextWhere || null,
+        checkIn.triggerNote || null,
+        checkIn.urgeNote || null,
+        checkIn.createdAt,
+      ]
+    );
+  });
 }
 
 export async function updateCheckIn(checkIn: CheckIn): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    `UPDATE check_ins SET
-      timestamp = ?,
-      quadrant = ?,
-      energy_level = ?,
-      pleasantness_level = ?,
-      primary_emotion = ?,
-      intensity = ?,
-      somatic_sensations = ?,
-      context_who = ?,
-      context_what = ?,
-      context_where = ?,
-      trigger_note = ?,
-      urge_note = ?
-    WHERE id = ?;`,
-    [
-      checkIn.timestamp,
-      checkIn.quadrant,
-      checkIn.energyLevel,
-      checkIn.pleasantnessLevel,
-      checkIn.primaryEmotion,
-      checkIn.intensity,
-      JSON.stringify(checkIn.somaticSensations || []),
-      JSON.stringify(checkIn.contextWho || []),
-      JSON.stringify(checkIn.contextWhat || []),
-      checkIn.contextWhere || null,
-      checkIn.triggerNote || null,
-      checkIn.urgeNote || null,
-      checkIn.id,
-    ]
-  );
+  return withDb(async (db) => {
+    await db.runAsync(
+      `UPDATE check_ins SET
+        timestamp = ?,
+        quadrant = ?,
+        energy_level = ?,
+        pleasantness_level = ?,
+        primary_emotion = ?,
+        intensity = ?,
+        somatic_sensations = ?,
+        context_who = ?,
+        context_what = ?,
+        context_where = ?,
+        trigger_note = ?,
+        urge_note = ?
+      WHERE id = ?;`,
+      [
+        checkIn.timestamp,
+        checkIn.quadrant,
+        checkIn.energyLevel,
+        checkIn.pleasantnessLevel,
+        checkIn.primaryEmotion,
+        checkIn.intensity,
+        JSON.stringify(checkIn.somaticSensations || []),
+        JSON.stringify(checkIn.contextWho || []),
+        JSON.stringify(checkIn.contextWhat || []),
+        checkIn.contextWhere || null,
+        checkIn.triggerNote || null,
+        checkIn.urgeNote || null,
+        checkIn.id,
+      ]
+    );
+  });
 }
 
 export async function getCheckInsForDay(date: Date): Promise<CheckIn[]> {
-  const db = await getDatabase();
-  const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
+  return withDb(async (db) => {
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
 
-  const rows = await db.getAllAsync<any>(
-    `SELECT * FROM check_ins WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC;`,
-    [startOfDay, endOfDay]
-  );
-  return rows.map(mapRowToCheckIn);
+    const rows = await db.getAllAsync<any>(
+      `SELECT * FROM check_ins WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC;`,
+      [startOfDay, endOfDay]
+    );
+    return rows.map(mapRowToCheckIn);
+  });
 }
 
 export async function getAllCheckIns(): Promise<CheckIn[]> {
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<any>(
-    `SELECT * FROM check_ins ORDER BY timestamp DESC;`
-  );
-  return rows.map(mapRowToCheckIn);
+  return withDb(async (db) => {
+    const rows = await db.getAllAsync<any>(
+      `SELECT * FROM check_ins ORDER BY timestamp DESC;`
+    );
+    return rows.map(mapRowToCheckIn);
+  });
+}
+
+export async function getCheckInsForDateRange(startDate: Date, endDate: Date): Promise<CheckIn[]> {
+  return withDb(async (db) => {
+    const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+    const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999).getTime();
+
+    const rows = await db.getAllAsync<any>(
+      `SELECT * FROM check_ins WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC;`,
+      [start, end]
+    );
+    return rows.map(mapRowToCheckIn);
+  });
 }
 
 export async function deleteCheckIn(id: string): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(`DELETE FROM check_ins WHERE id = ?;`, [id]);
+  return withDb(async (db) => {
+    await db.runAsync(`DELETE FROM check_ins WHERE id = ?;`, [id]);
+  });
 }
 
 export async function getReminderSettings(): Promise<ReminderSetting> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<any>(`SELECT * FROM reminder_settings WHERE id = 1;`);
-  if (!row) {
-    return { id: 1, enabled: true, times: ['09:00', '13:00', '18:00', '21:30'] };
-  }
-  return {
-    id: row.id,
-    enabled: Boolean(row.enabled),
-    times: JSON.parse(row.times || '[]'),
-  };
+  return withDb(async (db) => {
+    const row = await db.getFirstAsync<any>(`SELECT * FROM reminder_settings WHERE id = 1;`);
+    if (!row) {
+      return { id: 1, enabled: true, times: ['09:00', '13:00', '18:00', '21:30'] };
+    }
+    let parsedTimes: string[] = [];
+    try {
+      parsedTimes = typeof row.times === 'string' ? JSON.parse(row.times || '[]') : row.times;
+    } catch {
+      parsedTimes = ['09:00', '13:00', '18:00', '21:30'];
+    }
+    return {
+      id: row.id,
+      enabled: Boolean(row.enabled),
+      times: Array.isArray(parsedTimes) ? parsedTimes : ['09:00', '13:00', '18:00', '21:30'],
+    };
+  });
 }
 
 export async function updateReminderSettings(settings: ReminderSetting): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync(
-    `UPDATE reminder_settings SET enabled = ?, times = ? WHERE id = 1;`,
-    [settings.enabled ? 1 : 0, JSON.stringify(settings.times)]
-  );
+  return withDb(async (db) => {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO reminder_settings (id, enabled, times) VALUES (1, ?, ?);`,
+      [settings.enabled ? 1 : 0, JSON.stringify(settings.times)]
+    );
+  });
 }
 
 export async function getThemeSetting(): Promise<'system' | 'light' | 'dark'> {
-  try {
-    const db = await getDatabase();
-    const row = await db.getFirstAsync<any>(
-      `SELECT value FROM app_settings WHERE key = 'theme_mode';`
-    );
-    if (row && (row.value === 'light' || row.value === 'dark' || row.value === 'system')) {
-      return row.value;
+  return withDb(async (db) => {
+    try {
+      const row = await db.getFirstAsync<any>(
+        `SELECT value FROM app_settings WHERE key = 'theme_mode';`
+      );
+      if (row && (row.value === 'light' || row.value === 'dark' || row.value === 'system')) {
+        return row.value;
+      }
+    } catch (err) {
+      console.warn('Error reading theme setting:', err);
     }
-  } catch (err) {
-    console.warn('Error reading theme setting:', err);
-  }
-  return 'system';
+    return 'system';
+  });
 }
 
 export async function setThemeSetting(mode: 'system' | 'light' | 'dark'): Promise<void> {
-  try {
-    const db = await getDatabase();
-    await db.runAsync(
-      `INSERT OR REPLACE INTO app_settings (key, value) VALUES ('theme_mode', ?);`,
-      [mode]
-    );
-  } catch (err) {
-    console.warn('Error saving theme setting:', err);
-  }
+  return withDb(async (db) => {
+    try {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO app_settings (key, value) VALUES ('theme_mode', ?);`,
+        [mode]
+      );
+    } catch (err) {
+      console.warn('Error saving theme setting:', err);
+    }
+  });
 }
 

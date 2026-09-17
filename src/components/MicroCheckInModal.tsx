@@ -12,10 +12,8 @@ import {
   BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { CheckIn, QuadrantType } from '../types';
-import { EMOTIONS, SOMATIC_SENSATIONS, CONTEXT_WHO, CONTEXT_WHERE } from '../constants/moodMeter';
-import { QuadrantSelector } from './QuadrantSelector';
+import { EMOTIONS, SOMATIC_SENSATIONS } from '../constants/moodMeter';
 import { useAppTheme } from '../theme/ThemeContext';
 
 interface Props {
@@ -25,6 +23,16 @@ interface Props {
   initialCheckIn?: CheckIn | null;
 }
 
+const LOCATION_OPTIONS = [
+  'Home',
+  'Work',
+  'Desk',
+  'Commute',
+  'Outdoors',
+  'Cafe',
+  'Gym',
+];
+
 export const MicroCheckInModal: React.FC<Props> = ({
   visible,
   onClose,
@@ -32,23 +40,21 @@ export const MicroCheckInModal: React.FC<Props> = ({
   initialCheckIn,
 }) => {
   const { theme, isDark } = useAppTheme();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  const [quadrant, setQuadrant] = useState<QuadrantType>('red');
-  const [primaryEmotion, setPrimaryEmotion] = useState<string>('Anxious');
-  const [intensity, setIntensity] = useState<number>(7);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [quadrant, setQuadrant] = useState<QuadrantType>('green');
+  const [primaryEmotion, setPrimaryEmotion] = useState<string>('Peaceful');
   const [somaticSensations, setSomaticSensations] = useState<string[]>([]);
-  const [contextWho, setContextWho] = useState<string[]>([]);
-  const [contextWhere, setContextWhere] = useState<string>('');
+  const [locations, setLocations] = useState<string[]>([]);
   const [reasonNote, setReasonNote] = useState<string>('');
 
   useEffect(() => {
     if (initialCheckIn) {
       setQuadrant(initialCheckIn.quadrant);
       setPrimaryEmotion(initialCheckIn.primaryEmotion);
-      setIntensity(initialCheckIn.intensity);
       setSomaticSensations(initialCheckIn.somaticSensations || []);
-      setContextWho(initialCheckIn.contextWho || []);
-      setContextWhere(initialCheckIn.contextWhere || '');
+      setLocations(
+        initialCheckIn.contextWhere ? [initialCheckIn.contextWhere] : initialCheckIn.contextWhat || []
+      );
       setReasonNote(initialCheckIn.triggerNote || initialCheckIn.urgeNote || '');
     } else {
       resetForm();
@@ -70,32 +76,36 @@ export const MicroCheckInModal: React.FC<Props> = ({
     return () => backHandler.remove();
   }, [visible, currentStep]);
 
-  const qMeta = theme.quadrants[quadrant];
+  const resetForm = () => {
+    setQuadrant('green');
+    setPrimaryEmotion('Peaceful');
+    setSomaticSensations([]);
+    setLocations([]);
+    setReasonNote('');
+  };
 
-  const handleQuadrantChange = (newQuadrant: QuadrantType) => {
-    setQuadrant(newQuadrant);
-    const firstEmotion = EMOTIONS[newQuadrant][0]?.name || 'Anxious';
+  const handlePickQuadrant = (q: QuadrantType) => {
+    setQuadrant(q);
+    const firstEmotion = EMOTIONS[q][0]?.name || 'Calm';
     setPrimaryEmotion(firstEmotion);
+    setCurrentStep(2);
   };
 
   const nextStep = () => {
-    Haptics.selectionAsync();
-    if (currentStep < 3) {
-      setCurrentStep((prev) => (prev + 1) as 1 | 2 | 3);
+    if (currentStep < 5) {
+      setCurrentStep((prev) => (prev + 1) as 1 | 2 | 3 | 4 | 5);
+    } else {
+      handleComplete();
     }
   };
 
   const prevStep = () => {
-    Haptics.selectionAsync();
     if (currentStep > 1) {
-      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3);
-    } else {
-      onClose();
+      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4 | 5);
     }
   };
 
   const toggleSomatic = (item: string) => {
-    Haptics.selectionAsync();
     if (somaticSensations.includes(item)) {
       setSomaticSensations(somaticSensations.filter((s) => s !== item));
     } else {
@@ -103,441 +113,380 @@ export const MicroCheckInModal: React.FC<Props> = ({
     }
   };
 
-  const toggleWho = (item: string) => {
-    Haptics.selectionAsync();
-    if (contextWho.includes(item)) {
-      setContextWho(contextWho.filter((w) => w !== item));
+  const toggleLocation = (loc: string) => {
+    if (locations.includes(loc)) {
+      setLocations(locations.filter((l) => l !== loc));
     } else {
-      setContextWho([...contextWho, item]);
+      setLocations([...locations, loc]);
     }
   };
 
-  const toggleWhere = (item: string) => {
-    Haptics.selectionAsync();
-    setContextWhere(contextWhere === item ? '' : item);
-  };
-
-  const handleSave = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    const checkInToSave: CheckIn = {
-      id: initialCheckIn ? initialCheckIn.id : `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+  const handleComplete = () => {
+    const checkIn: CheckIn = {
+      id: initialCheckIn ? initialCheckIn.id : Date.now().toString(),
       timestamp: initialCheckIn ? initialCheckIn.timestamp : Date.now(),
       quadrant,
-      energyLevel: quadrant === 'red' || quadrant === 'yellow' ? 8 : 3,
+      energyLevel: quadrant === 'yellow' || quadrant === 'red' ? 8 : 3,
       pleasantnessLevel: quadrant === 'yellow' || quadrant === 'green' ? 8 : 3,
       primaryEmotion,
-      intensity,
+      intensity: 7,
       somaticSensations,
-      contextWho,
-      contextWhat: [],
-      contextWhere: contextWhere || undefined,
+      contextWho: [],
+      contextWhat: locations,
+      contextWhere: locations[0] || '',
       triggerNote: reasonNote.trim() || undefined,
-      urgeNote: undefined,
       createdAt: initialCheckIn ? initialCheckIn.createdAt : Date.now(),
     };
-
-    onSave(checkInToSave);
-    resetForm();
+    onSave(checkIn);
     onClose();
   };
 
-  const resetForm = () => {
-    setQuadrant('red');
-    setPrimaryEmotion('Anxious');
-    setIntensity(7);
-    setSomaticSensations([]);
-    setContextWho([]);
-    setContextWhere('');
-    setReasonNote('');
-    setCurrentStep(1);
-  };
-
-  const emotionsList = EMOTIONS[quadrant] || [];
-  const selectedEmotionItem = emotionsList.find(
-    (e) => e.name.toLowerCase() === primaryEmotion.toLowerCase()
-  );
+  const qMeta = theme.quadrants[quadrant];
+  const currentEmotionList = EMOTIONS[quadrant] || [];
+  const currentDefinition =
+    currentEmotionList.find((e) => e.name === primaryEmotion)?.definition ||
+    'Feeling calm, quiet, and grounded.';
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      presentationStyle="fullScreen"
+      onRequestClose={() => {
+        if (currentStep > 1) prevStep();
+        else onClose();
+      }}
     >
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <KeyboardAvoidingView
+          style={styles.keyboardAvoid}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardContainer}
         >
-          {/* Top Bar: single X in top right corner, Back button if step > 1 */}
+          {/* Top Bar Navigation */}
           <View style={styles.topBar}>
-            {currentStep > 1 ? (
-              <TouchableOpacity
-                onPress={prevStep}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={styles.backBtn}
-              >
-                <Text style={[styles.backBtnText, { color: theme.textMuted }]}>‹ Back</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.backBtnPlaceholder} />
-            )}
-
             <TouchableOpacity
-              onPress={onClose}
+              onPress={prevStep}
+              style={[styles.navBtn, currentStep === 1 && styles.navBtnHidden]}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.closeBtn}
+              disabled={currentStep === 1}
             >
-              <Text style={[styles.closeBtnText, { color: theme.textSubtle }]}>✕</Text>
+              <Text style={[styles.navBtnText, { color: theme.textMuted }]}>‹ Back</Text>
             </TouchableOpacity>
-          </View>
 
-          {/* Step Content */}
-          <ScrollView
-            style={styles.scrollContainer}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* STEP 1: What are you feeling right now? */}
-            {currentStep === 1 && (
-              <View style={styles.stepContent}>
-                <Text style={[styles.questionTitle, { color: theme.text }]}>
-                  What are you feeling right now?
-                </Text>
-
-                {/* Yale How We Feel 2x2 Quadrant Grid */}
-                <QuadrantSelector
-                  selectedQuadrant={quadrant}
-                  onSelect={handleQuadrantChange}
-                />
-
-                {/* Emotion Vocabulary Chips: Highlight only, no dot */}
-                <View style={styles.sectionHeaderSpacing}>
-                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
-                    SELECT EMOTION
-                  </Text>
-                </View>
-
-                {/* Selected Emotion Definition */}
-                {selectedEmotionItem && (
+            {/* 5 Progress Indicators */}
+            <View style={styles.stepDots}>
+              {([1, 2, 3, 4, 5] as const).map((stepNum) => {
+                const isActive = stepNum === currentStep;
+                return (
                   <View
+                    key={stepNum}
                     style={[
-                      styles.definitionCard,
+                      styles.stepDot,
                       {
-                        backgroundColor: qMeta.subtleBg,
-                        borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : theme.border,
-                        borderLeftColor: qMeta.color,
-                      },
-                    ]}
-                  >
-                    <View style={styles.definitionHeader}>
-                      <Text style={[styles.definitionWord, { color: isDark ? '#FFFFFF' : theme.text }]}>
-                        {selectedEmotionItem.name}
-                      </Text>
-                      <Text style={[styles.definitionTag, { color: qMeta.color }]}>
-                        {selectedEmotionItem.energy.toUpperCase()} ENERGY · {selectedEmotionItem.pleasantness.toUpperCase()}
-                      </Text>
-                    </View>
-                    <Text style={[styles.definitionText, { color: theme.textSecondary }]}>
-                      {selectedEmotionItem.definition}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.chipsWrap}>
-                  {emotionsList.map((item) => {
-                    const isSelected = primaryEmotion.toLowerCase() === item.name.toLowerCase();
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          setPrimaryEmotion(item.name);
-                        }}
-                        style={[
-                          styles.chip,
-                          isSelected
-                            ? {
-                                backgroundColor: qMeta.subtleBg,
-                                borderColor: qMeta.color,
-                                borderWidth: 1.5,
-                              }
-                            : {
-                                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-                                borderWidth: 1,
-                              },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            {
-                              color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
-                              fontWeight: isSelected ? '700' : '500',
-                            },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-
-            {/* STEP 2: Where are you feeling this? */}
-            {currentStep === 2 && (
-              <View style={styles.stepContent}>
-                <Text style={[styles.questionTitle, { color: theme.text }]}>
-                  Where are you feeling this?
-                </Text>
-
-                {/* Intensity 1–10 Selector Strip */}
-                <View style={styles.subSection}>
-                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
-                    INTENSITY ({intensity}/10)
-                  </Text>
-                  <View style={styles.intensityStrip}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
-                      const isSelected = intensity === num;
-                      return (
-                        <TouchableOpacity
-                          key={num}
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setIntensity(num);
-                          }}
-                          style={[
-                            styles.intensityNumberBtn,
-                            isSelected
-                              ? {
-                                  backgroundColor: qMeta.subtleBg,
-                                  borderColor: qMeta.color,
-                                  borderWidth: 1.5,
-                                }
-                              : {
-                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-                                  borderWidth: 1,
-                                },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.intensityNumberText,
-                              {
-                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textMuted,
-                                fontWeight: isSelected ? '800' : '600',
-                              },
-                            ]}
-                          >
-                            {num}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Body Area */}
-                <View style={styles.subSection}>
-                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
-                    BODY AREA
-                  </Text>
-                  <View style={styles.chipsWrap}>
-                    {SOMATIC_SENSATIONS.map((area) => {
-                      const isSelected = somaticSensations.includes(area);
-                      return (
-                        <TouchableOpacity
-                          key={area}
-                          activeOpacity={0.8}
-                          onPress={() => toggleSomatic(area)}
-                          style={[
-                            styles.chip,
-                            isSelected
-                              ? {
-                                  backgroundColor: qMeta.subtleBg,
-                                  borderColor: qMeta.color,
-                                  borderWidth: 1.5,
-                                }
-                              : {
-                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-                                  borderWidth: 1,
-                                },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              {
-                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
-                                fontWeight: isSelected ? '700' : '500',
-                              },
-                            ]}
-                          >
-                            {area}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Company */}
-                <View style={styles.subSection}>
-                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
-                    COMPANY
-                  </Text>
-                  <View style={styles.chipsWrap}>
-                    {CONTEXT_WHO.map((person) => {
-                      const isSelected = contextWho.includes(person);
-                      return (
-                        <TouchableOpacity
-                          key={person}
-                          activeOpacity={0.8}
-                          onPress={() => toggleWho(person)}
-                          style={[
-                            styles.chip,
-                            isSelected
-                              ? {
-                                  backgroundColor: qMeta.subtleBg,
-                                  borderColor: qMeta.color,
-                                  borderWidth: 1.5,
-                                }
-                              : {
-                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-                                  borderWidth: 1,
-                                },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              {
-                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
-                                fontWeight: isSelected ? '700' : '500',
-                              },
-                            ]}
-                          >
-                            {person}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Setting */}
-                <View style={styles.subSection}>
-                  <Text style={[styles.subheadingMono, { color: theme.textSubtle }]}>
-                    SETTING
-                  </Text>
-                  <View style={styles.chipsWrap}>
-                    {CONTEXT_WHERE.map((loc) => {
-                      const isSelected = contextWhere === loc;
-                      return (
-                        <TouchableOpacity
-                          key={loc}
-                          activeOpacity={0.8}
-                          onPress={() => toggleWhere(loc)}
-                          style={[
-                            styles.chip,
-                            isSelected
-                              ? {
-                                  backgroundColor: qMeta.subtleBg,
-                                  borderColor: qMeta.color,
-                                  borderWidth: 1.5,
-                                }
-                              : {
-                                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-                                  borderWidth: 1,
-                                },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              {
-                                color: isSelected ? (isDark ? '#FFFFFF' : qMeta.color) : theme.textSecondary,
-                                fontWeight: isSelected ? '700' : '500',
-                              },
-                            ]}
-                          >
-                            {loc}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* STEP 3: Why are you feeling this? */}
-            {currentStep === 3 && (
-              <View style={styles.stepContent}>
-                <Text style={[styles.questionTitle, { color: theme.text }]}>
-                  Why are you feeling this?
-                </Text>
-
-                <View
-                  style={[
-                    styles.textAreaWrapper,
-                    {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.surfaceSecondary,
-                      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-                    },
-                  ]}
-                >
-                  <TextInput
-                    placeholder="Write a few thoughts on what brought this moment on..."
-                    placeholderTextColor={theme.textSubtle}
-                    value={reasonNote}
-                    onChangeText={setReasonNote}
-                    multiline
-                    autoFocus
-                    numberOfLines={6}
-                    style={[
-                      styles.textAreaInput,
-                      {
-                        color: theme.text,
+                        backgroundColor: isActive ? theme.btnPrimaryBg : theme.borderFocus,
+                        width: isActive ? 16 : 5,
                       },
                     ]}
                   />
-                </View>
-              </View>
-            )}
-          </ScrollView>
+                );
+              })}
+            </View>
 
-          {/* Bottom Action Button */}
-          <View style={[styles.bottomBar, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border }]}>
-            {currentStep < 3 ? (
-              <TouchableOpacity
-                onPress={nextStep}
-                style={[styles.primaryActionBtn, { backgroundColor: qMeta.color }]}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.primaryActionBtnText}>Continue →</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                onPress={handleSave}
-                style={[styles.primaryActionBtn, { backgroundColor: qMeta.color }]}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.primaryActionBtnText}>Save Entry</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={onClose}
+              style={[styles.navBtn, { alignItems: 'flex-end' }]}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Text style={[styles.navBtnText, { color: theme.textMuted }]}>Cancel</Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Step 1: 2x2 Quadrant Selection */}
+          {currentStep === 1 && (
+            <View style={styles.stepContent}>
+              <Text style={[styles.stepTitle, { color: theme.text }]}>
+                How are you feeling right now?
+              </Text>
+              <View style={styles.quadrantGrid}>
+                {/* Yellow */}
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => handlePickQuadrant('yellow')}
+                  style={[
+                    styles.quadrantCard,
+                    {
+                      backgroundColor: theme.quadrants.yellow.cardBg,
+                      borderColor: theme.quadrants.yellow.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.quadrantTitle, { color: theme.quadrants.yellow.textColor }]}>
+                    High Energy
+                  </Text>
+                  <Text style={[styles.quadrantSubtitle, { color: theme.quadrants.yellow.subTextColor }]}>
+                    Pleasant
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Red */}
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => handlePickQuadrant('red')}
+                  style={[
+                    styles.quadrantCard,
+                    {
+                      backgroundColor: theme.quadrants.red.cardBg,
+                      borderColor: theme.quadrants.red.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.quadrantTitle, { color: theme.quadrants.red.textColor }]}>
+                    High Energy
+                  </Text>
+                  <Text style={[styles.quadrantSubtitle, { color: theme.quadrants.red.subTextColor }]}>
+                    Unpleasant
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Green */}
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => handlePickQuadrant('green')}
+                  style={[
+                    styles.quadrantCard,
+                    {
+                      backgroundColor: theme.quadrants.green.cardBg,
+                      borderColor: theme.quadrants.green.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.quadrantTitle, { color: theme.quadrants.green.textColor }]}>
+                    Low Energy
+                  </Text>
+                  <Text style={[styles.quadrantSubtitle, { color: theme.quadrants.green.subTextColor }]}>
+                    Pleasant
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Blue */}
+                <TouchableOpacity
+                  activeOpacity={0.88}
+                  onPress={() => handlePickQuadrant('blue')}
+                  style={[
+                    styles.quadrantCard,
+                    {
+                      backgroundColor: theme.quadrants.blue.cardBg,
+                      borderColor: theme.quadrants.blue.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.quadrantTitle, { color: theme.quadrants.blue.textColor }]}>
+                    Low Energy
+                  </Text>
+                  <Text style={[styles.quadrantSubtitle, { color: theme.quadrants.blue.subTextColor }]}>
+                    Unpleasant
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Step 2: Emotion Selection & Live Definition Box */}
+          {currentStep === 2 && (
+            <View style={styles.stepContent}>
+              <Text style={[styles.stepTitle, { color: theme.text }]}>Select your emotion</Text>
+
+              {/* Definition Box */}
+              <View
+                style={[
+                  styles.definitionBox,
+                  {
+                    backgroundColor: theme.surfaceElevated,
+                    borderColor: theme.border,
+                    borderLeftColor: qMeta.color,
+                  },
+                ]}
+              >
+                <Text style={[styles.definitionTitle, { color: isDark ? qMeta.textColor : qMeta.color }]}>
+                  {primaryEmotion}
+                </Text>
+                <Text style={[styles.definitionText, { color: theme.textSecondary }]}>
+                  {currentDefinition}
+                </Text>
+              </View>
+
+              {/* 36 Emotion Chips Cloud */}
+              <ScrollView
+                style={styles.chipScrollView}
+                contentContainerStyle={styles.chipCloud}
+                showsVerticalScrollIndicator={false}
+              >
+                {currentEmotionList.map((item) => {
+                  const isSelected = primaryEmotion === item.name;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      activeOpacity={0.8}
+                      onPress={() => setPrimaryEmotion(item.name)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected
+                            ? qMeta.selectedChipBg
+                            : theme.chipBg,
+                          borderColor: isSelected
+                            ? qMeta.selectedChipBorder
+                            : theme.chipBorder,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          {
+                            color: isSelected
+                              ? qMeta.selectedChipText
+                              : theme.chipText,
+                            fontWeight: isSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Step 3: Somatic Sensations */}
+          {currentStep === 3 && (
+            <View style={styles.stepContent}>
+              <Text style={[styles.stepTitle, { color: theme.text }]}>Where do you feel this?</Text>
+              <ScrollView
+                style={styles.chipScrollView}
+                contentContainerStyle={styles.chipCloud}
+                showsVerticalScrollIndicator={false}
+              >
+                {SOMATIC_SENSATIONS.map((item) => {
+                  const isSelected = somaticSensations.includes(item);
+                  return (
+                    <TouchableOpacity
+                      key={item}
+                      activeOpacity={0.8}
+                      onPress={() => toggleSomatic(item)}
+                      style={[
+                        styles.chip,
+                        styles.somaticChip,
+                        {
+                          backgroundColor: isSelected ? theme.btnPrimaryBg : theme.chipBg,
+                          borderColor: isSelected ? 'transparent' : theme.chipBorder,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          {
+                            color: isSelected ? theme.btnPrimaryText : theme.chipText,
+                            fontWeight: isSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Step 4: Physical Location */}
+          {currentStep === 4 && (
+            <View style={styles.stepContent}>
+              <Text style={[styles.stepTitle, { color: theme.text }]}>Where are you?</Text>
+              <ScrollView
+                style={styles.chipScrollView}
+                contentContainerStyle={styles.chipCloud}
+                showsVerticalScrollIndicator={false}
+              >
+                {LOCATION_OPTIONS.map((loc) => {
+                  const isSelected = locations.includes(loc);
+                  return (
+                    <TouchableOpacity
+                      key={loc}
+                      activeOpacity={0.8}
+                      onPress={() => toggleLocation(loc)}
+                      style={[
+                        styles.chip,
+                        styles.somaticChip,
+                        {
+                          backgroundColor: isSelected ? theme.btnPrimaryBg : theme.chipBg,
+                          borderColor: isSelected ? 'transparent' : theme.chipBorder,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          {
+                            color: isSelected ? theme.btnPrimaryText : theme.chipText,
+                            fontWeight: isSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {loc}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Step 5: Reflection Note */}
+          {currentStep === 5 && (
+            <View style={styles.stepContent}>
+              <Text style={[styles.stepTitle, { color: theme.text }]}>What is causing this?</Text>
+              <View
+                style={[
+                  styles.textAreaWrapper,
+                  {
+                    backgroundColor: theme.surfaceElevated,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <TextInput
+                  style={[styles.textAreaInput, { color: theme.text }]}
+                  placeholder="Write a note..."
+                  placeholderTextColor={theme.textMuted}
+                  multiline
+                  numberOfLines={6}
+                  value={reasonNote}
+                  onChangeText={setReasonNote}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Bottom Action Button - shown on Steps 2 to 5 */}
+          {currentStep >= 2 && (
+            <View style={[styles.bottomBar, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.07)' : theme.border }]}>
+              <TouchableOpacity
+                onPress={currentStep === 5 ? handleComplete : nextStep}
+                style={[styles.primaryActionBtn, { backgroundColor: theme.btnPrimaryBg }]}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.primaryActionBtnText, { color: theme.btnPrimaryText }]}>
+                  {currentStep === 5 ? 'Save check-in' : 'Continue'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -545,169 +494,148 @@ export const MicroCheckInModal: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
   },
-  keyboardContainer: {
+  keyboardAvoid: {
     flex: 1,
   },
   topBar: {
-    height: 48,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  backBtn: {
-    minWidth: 60,
-    justifyContent: 'center',
-  },
-  backBtnPlaceholder: {
-    minWidth: 60,
-  },
-  backBtnText: {
-    fontFamily: 'monospace',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  closeBtn: {
-    minWidth: 40,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 28,
+  },
+  navBtn: {
+    minWidth: 60,
+    paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  navBtnHidden: {
+    opacity: 0,
+  },
+  navBtnText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  stepDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepDot: {
+    height: 4,
+    borderRadius: 2,
   },
   stepContent: {
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
-  questionTitle: {
+  stepTitle: {
     fontFamily: 'serif',
     fontSize: 24,
     fontWeight: '400',
-    lineHeight: 32,
+    marginBottom: 16,
     letterSpacing: -0.3,
-    marginBottom: 20,
   },
-  sectionHeaderSpacing: {
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  subSection: {
-    marginBottom: 20,
-  },
-  subheadingMono: {
-    fontFamily: 'monospace',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-  },
-  chipsWrap: {
+  quadrantGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  chipText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
-  definitionCard: {
-    marginTop: 6,
-    marginBottom: 14,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderLeftWidth: 3,
-  },
-  definitionHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    gap: 12,
     justifyContent: 'space-between',
-    marginBottom: 6,
-    gap: 8,
-    flexWrap: 'wrap',
+    paddingTop: 4,
   },
-  definitionWord: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  quadrantCard: {
+    width: '48%',
+    aspectRatio: 0.95,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    justifyContent: 'flex-end',
   },
-  definitionTag: {
-    fontFamily: 'monospace',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+  quadrantTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  quadrantSubtitle: {
+    fontSize: 12,
+    fontWeight: '300',
+  },
+  definitionBox: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderLeftWidth: 3.5,
+    marginBottom: 16,
+  },
+  definitionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   definitionText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
   },
-  intensityStrip: {
-    flexDirection: 'row',
-    gap: 4,
-    justifyContent: 'space-between',
-  },
-  intensityNumberBtn: {
+  chipScrollView: {
     flex: 1,
-    height: 38,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  intensityNumberText: {
-    fontFamily: 'monospace',
+  chipCloud: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 28,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  chipText: {
     fontSize: 12,
+    fontWeight: '500',
+  },
+  somaticChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
   },
   textAreaWrapper: {
-    borderRadius: 14,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: 14,
+    padding: 16,
     minHeight: 140,
   },
   textAreaInput: {
-    fontFamily: 'serif',
-    fontSize: 16,
-    lineHeight: 24,
-    textAlignVertical: 'top',
-    minHeight: 120,
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 100,
   },
   bottomBar: {
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderTopWidth: 1,
   },
   primaryActionBtn: {
-    height: 48,
-    borderRadius: 12,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   primaryActionBtnText: {
-    color: '#FFFFFF',
-    fontFamily: 'monospace',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
 

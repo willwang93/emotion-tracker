@@ -8,7 +8,6 @@ import {
   PanResponder,
   Dimensions,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { CheckIn } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
 
@@ -52,7 +51,6 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dx < SWIPE_THRESHOLD) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           Animated.timing(translateX, {
             toValue: -SCREEN_WIDTH,
             duration: 180,
@@ -100,16 +98,10 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
     ? (checkIn.contextWho.includes('Alone') ? 'ALONE' : `WITH ${checkIn.contextWho.join(', ').toUpperCase()}`)
     : '';
 
-  const kickerDetails = [locationPart, whoPart].filter(Boolean).join(' ');
-  const kickerFull = kickerDetails ? `${timeFormatted} · ${kickerDetails}` : timeFormatted;
-
-  // Hero quote: User's reflection text
-  const reflectionText = checkIn.triggerNote || checkIn.urgeNote || `Noticed a quiet sense of feeling ${checkIn.primaryEmotion.toLowerCase()}.`;
-
-  // Body areas summary
-  const bodySummary = checkIn.somaticSensations && checkIn.somaticSensations.length > 0
-    ? ` · ${checkIn.somaticSensations.join(', ')}`
-    : '';
+  const allChips = [
+    ...(checkIn.somaticSensations || []),
+    ...(checkIn.contextWhat || (checkIn.contextWhere ? [checkIn.contextWhere] : [])),
+  ];
 
   return (
     <View style={styles.swipeWrapper}>
@@ -123,49 +115,50 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
         style={[
           styles.card,
           {
-            backgroundColor: isDark ? 'rgba(17, 24, 39, 0.85)' : '#FFFFFF',
-            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-            borderLeftColor: qMeta.color,
-            borderLeftWidth: 3,
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
             transform: [{ translateX }],
           },
         ]}
         {...panResponder.panHandlers}
       >
         <TouchableOpacity
-          activeOpacity={0.82}
+          activeOpacity={0.85}
           onPress={handleCardPress}
           style={styles.cardInner}
         >
-          {/* Top Kicker: Typewriter Monospace */}
-          <Text style={[styles.kickerText, { color: theme.textMuted }]}>
-            {kickerFull}
-          </Text>
-
-          {/* Hero Quote: Editorial Serif Italic */}
-          <View style={styles.quoteWrapper}>
-            <Text
-              style={[
-                styles.heroQuote,
-                {
-                  color: theme.text,
-                },
-              ]}
-            >
-              “{reflectionText}”
+          {/* Top Row: Tabular Time & Quadrant Dot */}
+          <View style={styles.cardTopRow}>
+            <Text style={[styles.timeText, { color: theme.textMuted }]}>
+              {timeFormatted}
             </Text>
+            <View style={[styles.quadrantDot, { backgroundColor: qMeta.color }]} />
           </View>
 
-          {/* Byline: Typewriter Monospace with Quadrant Color Accent */}
-          <View style={styles.bylineRow}>
-            <Text style={[styles.bylineDash, { color: qMeta.color }]}>—</Text>
-            <Text style={[styles.bylineEmotion, { color: qMeta.color }]}>
-              {checkIn.primaryEmotion.toUpperCase()}
+          {/* Middle Section: Emotion & Note */}
+          <View style={styles.middleSection}>
+            <Text style={[styles.emotionTitle, { color: theme.text }]}>
+              {checkIn.primaryEmotion}
             </Text>
-            <Text style={[styles.bylineDetails, { color: theme.textSubtle }]}>
-              {` · Intensity ${checkIn.intensity}${bodySummary}`}
-            </Text>
+            {Boolean(checkIn.triggerNote || checkIn.urgeNote) && (
+              <Text style={[styles.noteText, { color: theme.textSecondary }]} numberOfLines={2}>
+                "{checkIn.triggerNote || checkIn.urgeNote}"
+              </Text>
+            )}
           </View>
+
+          {/* Bottom Row: Somatics & Locations */}
+          {allChips.length > 0 && (
+            <View style={styles.chipsRow}>
+              {allChips.map((chip, i) => (
+                <View key={i} style={[styles.cardChip, { backgroundColor: theme.chipBg }]}>
+                  <Text style={[styles.cardChipText, { color: theme.textSecondary }]}>
+                    {chip}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -174,7 +167,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
 
 const styles = StyleSheet.create({
   swipeWrapper: {
-    marginVertical: 6,
+    marginVertical: 5,
     position: 'relative',
     justifyContent: 'center',
   },
@@ -185,7 +178,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#DC2626',
-    borderRadius: 14,
+    borderRadius: 20,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -193,58 +186,62 @@ const styles = StyleSheet.create({
   },
   deleteBackgroundText: {
     color: '#FFFFFF',
-    fontFamily: 'monospace',
     fontWeight: '700',
     fontSize: 12,
     letterSpacing: 1.5,
   },
   card: {
-    borderRadius: 14,
+    borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
   },
   cardInner: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
   },
-  kickerText: {
-    fontFamily: 'monospace',
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  quoteWrapper: {
-    marginBottom: 10,
-  },
-  heroQuote: {
-    fontFamily: 'serif',
-    fontStyle: 'italic',
-    fontSize: 17,
-    lineHeight: 25,
-    letterSpacing: -0.2,
-  },
-  bylineRow: {
+  cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  timeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    fontVariant: ['tabular-nums'],
+  },
+  quadrantDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  middleSection: {
+    marginBottom: 10,
+  },
+  emotionTitle: {
+    fontFamily: 'serif',
+    fontSize: 20,
+    fontWeight: '400',
+  },
+  noteText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  chipsRow: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 2,
+    gap: 6,
+    paddingTop: 4,
   },
-  bylineDash: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    fontWeight: '700',
-    marginRight: 6,
+  cardChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  bylineEmotion: {
-    fontFamily: 'monospace',
+  cardChipText: {
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  bylineDetails: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    letterSpacing: 0.4,
+    fontWeight: '500',
   },
 });

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { QuadrantType } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
 
@@ -20,7 +19,6 @@ export const QuadrantSelector: React.FC<Props> = ({ selectedQuadrant, onSelect }
   const { theme, isDark } = useAppTheme();
 
   const handlePress = (quadrant: QuadrantType) => {
-    Haptics.selectionAsync();
     onSelect(quadrant);
   };
 
