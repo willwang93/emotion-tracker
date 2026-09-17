@@ -1,54 +1,99 @@
-# Emotion Tracker App — Project Specification & Architecture
+# Emotion Tracker
 
-## Overview
-A custom, privacy-first mobile emotion tracking application tailored for a **Google Pixel 5 running Android 14**. Inspired by Yale's *How We Feel*, but with custom behavioral/somatic tracking, peak–valley retrospective flows to counteract recency bias, and **LLM/AI-powered analysis of free-text reflections and voice memos**.
+A minimalist, privacy-first mobile emotion tracking application built with React Native and Expo SDK 57, designed specifically for Android 14 (Google Pixel 5).
 
----
-
-## Target Environment
-* **Device:** Google Pixel 5
-* **OS:** Android 14 (Security Patch: Nov 5, 2023)
-* **Directory:** `/Users/willwang/Documents/emotion-tracker-app`
-* **Stack Recommendation:** React Native + Expo (runs via Expo Go on device or as standalone APK; local SQLite database; native notifications & audio APIs). Alternative: Progressive Web App (PWA) with React/Vite.
+Inspired by the Yale Center for Emotional Intelligence's Mood Meter (*How We Feel*), the app provides a quiet, intentional space to label emotions with granular precision, track somatic sensations, and build emotional awareness throughout the day.
 
 ---
 
-## Core Feature Requirements
+## Key Features
 
-### 1. Real-Time Micro Check-In (< 30 seconds)
-* **Yale Mood Meter Quadrant Picker:**
-  * High vs. Low Energy × Pleasant vs. Unpleasant.
-  * Granular emotion vocabulary chips (e.g., ecstatic, anxious, numb, peaceful).
-  * Intensity slider (1–10).
-* **Somatic / Body Mapping:**
-  * Quick-select chips: chest tightness, clenched jaw, racing heart, gut flutter, fatigue, relaxed, etc.
-* **Context Tags:**
-  * *Who:* Alone, Partner, Coworker, Friend, Family.
-  * *What:* Work, Meeting, Commute, Chores, Exercise, Relaxing.
-  * *Where:* Home, Office, Transit, Outdoors.
-* **Deep Context Prompts (Free-Text & Voice):**
-  * *What is triggering it?*
-  * *What behaviors / urges does this make me want to do?*
-  * Voice memo recording with auto-transcription.
-
-### 2. End-of-Day Retrospective (Peak–Valley–Baseline)
-* Chronological visual timeline of all check-ins for the day.
-* **Peak:** Identifies/prompts for the highest-intensity positive event.
-* **Valley:** Identifies/prompts for the lowest or most distressing event to unpack somatic/urge patterns.
-* **Baseline:** Captures the background emotional hum of the day.
-
-### 3. AI / LLM Analysis of Free-Text Notes (Key Differentiator)
-* **In-the-Moment Reflection:** Immediate 1–2 sentence compassionate reflection or CBT reframing (detecting cognitive distortions, urging vs. acting).
-* **Longitudinal Trends:** Weekly/monthly semantic synthesis (e.g., identifying recurring triggers, correlation between physical tension and specific work situations).
-* **Privacy:** Direct client-side API calls using user-owned API key (e.g., Gemini Flash or Claude/OpenAI). No third-party data broker.
-
-### 4. Notifications & Storage
-* Gentle, configurable check-in nudges (e.g., morning, mid-day, evening).
-* Local-first storage (SQLite on device) with JSON/CSV export.
+* **Yale Mood Meter Taxonomy:**
+  * 4 Quadrants: High/Low Energy × Pleasant/Unpleasant (Red, Yellow, Blue, Green).
+  * 48 granular emotion words complete with definitions (e.g., *Anxious, Enraged, Exuberant, Serene, Melancholy, Peaceful*).
+* **Somatic & Contextual Awareness:**
+  * Quick-select body sensations (chest tightness, clenched jaw, racing heart, relaxed, warm, etc.).
+  * Context tagging (*Who:* Alone, Partner, Coworker, Friend, Family; *Where:* Home, Office, Transit, Outdoors).
+* **Literary Editorial Design:**
+  * Minimalist, magazine-inspired aesthetic with serif typography and clean layouts.
+  * Native dual-theme support: Warm editorial cream (`#FBF9F5`) and dark slate (`#0F1115`).
+  * Chronological journal timeline displaying quote reflections, emotion badges, and somatic markers.
+* **100% Private & Offline-First:**
+  * All check-ins and reflections are stored strictly on-device in a local SQLite database (`emotion_tracker.db`).
+  * Zero third-party telemetry, tracking, or cloud dependencies. Your emotional life remains entirely on your device.
+* **Smart Notification Nudges:**
+  * Configurable local notification reminders (Android 14 exact alarm scheduling) to encourage regular emotional check-ins throughout the day.
 
 ---
 
-## Next Steps When Opening the New Workspace
-1. Select `/Users/willwang/Documents/emotion-tracker-app` as the workspace in Antigravity.
-2. Confirm framework: Initialize with `npx create-expo-app` (React Native/Expo) or PWA setup.
-3. Scaffold SQLite schema and emotion taxonomy models.
+## Tech Stack
+
+| Component | Technology | Version |
+| :--- | :--- | :--- |
+| **Framework** | Expo SDK | `~57.0.20` |
+| **Runtime** | React Native / React | `0.86.3` / `19.2.3` |
+| **Language** | TypeScript (Strict) | `~6.0.3` |
+| **Local Storage** | `expo-sqlite` | `~57.0.2` |
+| **Notifications & Haptics** | `expo-notifications` / `expo-haptics` | `~57.0.17` / `~57.0.2` |
+| **Target Platform** | Android 14 (Google Pixel 5) | `com.willwang.emotiontracker` |
+
+---
+
+## Getting Started
+
+### Prerequisites
+* Node.js (v18 or higher recommended) & npm
+* Android device connected via USB with USB Debugging enabled, or an Android emulator
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/willwang93/emotion-tracker.git
+cd emotion-tracker
+
+# Install dependencies
+npm install
+```
+
+### Running Locally
+```bash
+# Start the Metro bundler
+npx expo start
+
+# Run the app directly on your connected Android device
+npx expo run:android
+
+# Run TypeScript type check
+npx tsc --noEmit
+```
+
+---
+
+## Project Structure
+
+```
+├── App.tsx                  # Root layout, date navigation, timeline feed, state orchestration
+├── app.json                 # Expo project configuration & native Android permissions
+├── src/
+│   ├── components/          # UI Components
+│   │   ├── MicroCheckInModal.tsx  # Multi-step check-in wizard (Mood Meter -> Sensations -> Context -> Reflection)
+│   │   ├── QuadrantSelector.tsx   # 2x2 Yale Mood Meter quadrant grid
+│   │   ├── ReminderModal.tsx      # Reminder settings & time scheduling
+│   │   └── TimelineCard.tsx       # Editorial journal cards with emotion badges & notes
+│   ├── constants/
+│   │   └── moodMeter.ts     # Yale Mood Meter taxonomy (48 emotions, somatic markers, context tags)
+│   ├── services/
+│   │   ├── db.ts            # expo-sqlite initialization, CRUD queries, database migrations
+│   │   └── notifications.ts # Local notification scheduling with Android 14 permissions
+│   ├── theme/
+│   │   ├── ThemeContext.tsx # React Context provider & useAppTheme hook
+│   │   └── index.ts         # Theme tokens (warm editorial cream & dark slate)
+│   └── types/
+│       └── index.ts         # TypeScript interfaces (CheckIn, QuadrantType, EmotionItem, etc.)
+└── android/                 # Prebuilt native Android project (SDK 34 / Android 14)
+```
+
+---
+
+## License
+MIT
