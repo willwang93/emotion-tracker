@@ -323,3 +323,20 @@ export async function setThemeSetting(mode: 'system' | 'light' | 'dark'): Promis
   });
 }
 
+export async function exportAllDataAsJson(): Promise<{ jsonString: string; count: number }> {
+  const checkIns = await getAllCheckIns();
+  const settings = await getReminderSettings();
+  const payload = {
+    app: 'Yale Mood Meter Emotion Tracker',
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    totalEntries: checkIns.length,
+    reminderSettings: settings,
+    entries: checkIns,
+  };
+  return {
+    jsonString: JSON.stringify(payload, null, 2),
+    count: checkIns.length,
+  };
+}
+
