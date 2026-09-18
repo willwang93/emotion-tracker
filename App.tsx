@@ -9,8 +9,9 @@ import {
   RefreshControl,
   StatusBar,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import { CheckIn, QuadrantType, ReminderSetting } from './src/types';
 import {
   getDatabase,
@@ -27,6 +28,7 @@ import { TimelineCard } from './src/components/TimelineCard';
 import { MicroCheckInModal } from './src/components/MicroCheckInModal';
 import { ReminderModal } from './src/components/ReminderModal';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeContext';
+import { fonts } from './src/theme';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -44,7 +46,15 @@ function getWeekDates(date: Date): Date[] {
   return days;
 }
 
+function getGreeting(date: Date): string {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning, Will';
+  if (hour < 17) return 'Good afternoon, Will';
+  return 'Good evening, Will';
+}
+
 function MainApp() {
+  const insets = useSafeAreaInsets();
   const { theme, isDark } = useAppTheme();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
@@ -82,7 +92,7 @@ function MainApp() {
         dayEntriesMap[itemDateStr].push(item);
       }
 
-      // Find the most frequent mood for each day (tie-breaker: latest check-in)
+      // Find the most frequent mood for each day
       const moodMap: Record<string, QuadrantType> = {};
       for (const [dayDateStr, entries] of Object.entries(dayEntriesMap)) {
         if (entries.length === 0) continue;
@@ -111,6 +121,7 @@ function MainApp() {
 
       const settings = await getReminderSettings();
       setReminderSetting(settings);
+      scheduleReminders(settings).catch((e) => console.warn('Startup reminder sync failed:', e));
     } catch (err) {
       console.error('Failed to load check-ins:', err);
     } finally {
@@ -180,43 +191,49 @@ function MainApp() {
     }
   };
 
-  const changeWeekBy = (weeks: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + weeks * 7);
-    setSelectedDate(newDate);
-  };
+  const dateKicker = selectedDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  }).toUpperCase();
 
-  const monthYearHeader = selectedDate.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const greeting = getGreeting(selectedDate);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: theme.background,
+          paddingTop: Math.max(insets.top, 20),
+          paddingBottom: Math.max(insets.bottom, 12),
+        },
+      ]}
+    >
       <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.background}
+        hidden={true}
+        translucent
+        backgroundColor="transparent"
       />
 
-      {/* Header */}
+      {/* Greeting & Date Banner with Profile Icon aligned */}
       <View style={styles.masthead}>
-        <View style={styles.mastheadTopRow}>
-          <Text style={[styles.mastheadDate, { color: theme.text }]}>
-            {selectedDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'short',
-              day: 'numeric',
-            })}
-          </Text>
-
+        <View style={styles.headerRow}>
+          <View style={styles.headerTextGroup}>
+            <Text style={[styles.dateKicker, { color: theme.textMuted }]}>
+              {dateKicker}
+            </Text>
+            <Text style={[styles.greetingText, { color: theme.text }]}>
+              {greeting}
+            </Text>
+          </View>
           <TouchableOpacity
             onPress={() => setIsSettingsModalVisible(true)}
-            style={styles.settingsBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={[styles.profileBtn, { backgroundColor: theme.btnPrimaryBg }]}
+            activeOpacity={0.85}
+            accessibilityLabel="Open reminders"
           >
-            <Text style={[styles.settingsBtnText, { color: theme.textSecondary }]}>
-              Settings
-            </Text>
+            <MaterialIcons name="notifications" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
@@ -236,7 +253,10 @@ function MainApp() {
                 <View
                   style={[
                     styles.weekDayCircle,
-                    isSelected && { backgroundColor: theme.activeDayBg },
+                    isSelected && {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#F5EAD4',
+                      borderRadius: 9999,
+                    },
                   ]}
                 >
                   <Text
@@ -244,7 +264,7 @@ function MainApp() {
                       styles.weekDayLetter,
                       {
                         color: isSelected ? theme.text : theme.textMuted,
-                        fontWeight: isSelected ? '600' : '400',
+                        fontFamily: isSelected ? fonts.bold : fonts.medium,
                       },
                     ]}
                   >
@@ -269,75 +289,88 @@ function MainApp() {
         </View>
       </View>
 
-      {/* Timeline Scrollable View */}
+      {/* Main Feed: Zero State (Screen 1) or Entries List (Screen 3) */}
       {isLoading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="small" color={theme.textMuted} />
+          <ActivityIndicator size="small" color={theme.btnPrimaryBg} />
         </View>
       ) : (
         <ScrollView
           style={styles.feedScroll}
-          contentContainerStyle={styles.feedContent}
+          contentContainerStyle={[
+            styles.feedContent,
+            checkIns.length === 0 && styles.feedContentEmpty,
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor={theme.textMuted}
-              colors={[theme.textMuted]}
+              tintColor={theme.btnPrimaryBg}
+              colors={[theme.btnPrimaryBg]}
             />
           }
         >
           {checkIns.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <View style={[styles.sunIconCircle, { borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
-                <Feather name="sun" size={20} color={theme.textMuted} />
-              </View>
-              <Text style={[styles.emptyStateTitle, { color: theme.text }]}>
-                No check-ins yet
-              </Text>
-              <Text style={[styles.emptyStateSubtitle, { color: theme.textMuted }]}>
-                Log how you are feeling whenever you want to check in.
-              </Text>
+            /* Screen 1: Morning Zero State with Giant Radiant Circle CTA */
+            <View style={styles.zeroStateContainer}>
+              <TouchableOpacity
+                onPress={handleOpenNewCheckIn}
+                style={[styles.radiantBigBtn, { backgroundColor: theme.btnPrimaryBg }]}
+                activeOpacity={0.88}
+              >
+                <MaterialIcons name="add" size={44} color="#FFFFFF" style={styles.radiantPlusIcon} />
+                <Text style={styles.radiantBtnText}>Add entry</Text>
+              </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.timelineList}>
-              {checkIns.map((item) => (
-                <TimelineCard
-                  key={item.id}
-                  checkIn={item}
-                  onEdit={handleEditCheckIn}
-                  onDelete={handleDeleteCheckIn}
-                />
-              ))}
+            /* Screen 3: Today's Entries State with Emotional Arc */
+            <View style={styles.entriesContainer}>
+              {/* Entries List Header */}
+              <Text style={[styles.entriesSectionTitle, { color: theme.text }]}>
+                Entries
+              </Text>
+
+              {/* Timeline Cards */}
+              <View style={styles.timelineList}>
+                {checkIns.map((item) => (
+                  <TimelineCard
+                    key={item.id}
+                    checkIn={item}
+                    onEdit={handleEditCheckIn}
+                    onDelete={handleDeleteCheckIn}
+                  />
+                ))}
+              </View>
             </View>
           )}
         </ScrollView>
       )}
 
-      {/* Fixed Bottom Action Button */}
-      <View
-        style={[
-          styles.bottomFloatingContainer,
-          {
-            backgroundColor: isDark
-              ? 'rgba(15, 17, 21, 0.92)'
-              : 'rgba(251, 249, 245, 0.92)',
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={handleOpenNewCheckIn}
-          style={[styles.fullWidthAddBtn, { backgroundColor: theme.btnPrimaryBg }]}
-          activeOpacity={0.85}
+      {/* Bottom Floating Pill CTA Button (shown when entries exist) */}
+      {checkIns.length > 0 && (
+        <View
+          style={[
+            styles.bottomFloatingContainer,
+            {
+              backgroundColor: isDark
+                ? 'rgba(15, 17, 21, 0.94)'
+                : 'rgba(254, 249, 238, 0.94)',
+            },
+          ]}
         >
-          <Text style={[styles.fullWidthAddBtnText, { color: theme.btnPrimaryText }]}>
-            Log emotion
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={handleOpenNewCheckIn}
+            style={[styles.bottomPillBtn, { backgroundColor: theme.btnPrimaryBg }]}
+            activeOpacity={0.88}
+          >
+            <MaterialIcons name="add" size={22} color="#FFFFFF" style={styles.bottomPlusIcon} />
+            <Text style={styles.bottomPillBtnText}>Add entry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {/* Micro Check-In Modal */}
+      {/* Micro Check-In Modal (4-Step Flow) */}
       <MicroCheckInModal
         visible={isCheckInModalVisible}
         onClose={handleCloseCheckInModal}
@@ -352,11 +385,23 @@ function MainApp() {
         setting={reminderSetting}
         onSaveSettings={handleSaveSettings}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    'PlusJakartaSans-Regular': require('./assets/fonts/PlusJakartaSans-Regular.ttf'),
+    'PlusJakartaSans-Medium': require('./assets/fonts/PlusJakartaSans-Medium.ttf'),
+    'PlusJakartaSans-SemiBold': require('./assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    'PlusJakartaSans-Bold': require('./assets/fonts/PlusJakartaSans-Bold.ttf'),
+    'PlusJakartaSans-ExtraBold': require('./assets/fonts/PlusJakartaSans-ExtraBold.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>
@@ -372,34 +417,47 @@ const styles = StyleSheet.create({
   },
   masthead: {
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 14,
+    paddingBottom: 6,
   },
-  mastheadTopRow: {
+  headerRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 16,
   },
-  mastheadDate: {
-    fontFamily: 'serif',
-    fontSize: 24,
-    fontWeight: '400',
-    letterSpacing: -0.3,
+  headerTextGroup: {
+    flex: 1,
+    paddingRight: 16,
   },
-  settingsBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+  profileBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  settingsBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
+  dateKicker: {
+    fontSize: 11,
+    fontFamily: fonts.bold,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  greetingText: {
+    fontSize: 28,
+    fontFamily: fonts.extraBold,
+    letterSpacing: -0.5,
   },
   weekRibbon: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 6,
+    paddingBottom: 4,
   },
   weekDayBtn: {
     flex: 1,
@@ -410,11 +468,12 @@ const styles = StyleSheet.create({
   weekDayCircle: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    alignSelf: 'center',
     overflow: 'hidden',
+    marginBottom: 6,
   },
   weekDayLetter: {
     fontSize: 12,
@@ -434,36 +493,51 @@ const styles = StyleSheet.create({
   },
   feedContent: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 12,
     paddingBottom: 110,
   },
-  emptyStateContainer: {
+  feedContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 40,
+  },
+  zeroStateContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 110,
-    paddingHorizontal: 32,
+    paddingVertical: 40,
   },
-  sunIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
+  radiantBigBtn: {
+    width: 210,
+    height: 210,
+    borderRadius: 105,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.38,
+    shadowRadius: 36,
+    elevation: 6,
   },
-  emptyStateTitle: {
-    fontFamily: 'serif',
-    fontSize: 20,
-    fontWeight: '400',
-    textAlign: 'center',
-    marginBottom: 6,
+  radiantPlusIcon: {
+    marginBottom: 4,
   },
-  emptyStateSubtitle: {
-    fontSize: 12,
+  radiantBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.1,
+    includeFontPadding: false,
     textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 240,
+    textAlignVertical: 'center',
+  },
+  entriesContainer: {
+    flex: 1,
+  },
+  entriesSectionTitle: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    letterSpacing: -0.2,
+    marginBottom: 12,
   },
   timelineList: {
     gap: 12,
@@ -477,20 +551,28 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 24,
   },
-  fullWidthAddBtn: {
-    height: 52,
-    borderRadius: 26,
+  bottomPillBtn: {
+    height: 56,
+    borderRadius: 9999,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
+    elevation: 4,
   },
-  fullWidthAddBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
+  bottomPlusIcon: {
+    marginRight: 6,
+  },
+  bottomPillBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: fonts.bold,
     letterSpacing: 0.2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
 });

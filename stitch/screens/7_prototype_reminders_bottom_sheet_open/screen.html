@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Interactive Reminders Prototype</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0e1117;
+      color: #2b1704;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      display: none;
+    }
+    .custom-scroll {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .tap-active:active {
+      transform: scale(0.97);
+    }
+    /* Smooth transitions */
+    .sheet-transition {
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+    .scrim-transition {
+      transition: opacity 0.3s ease;
+    }
+  </style>
+</head>
+<body class="min-h-screen w-full flex items-center justify-center p-0 md:p-6 lg:p-8">
+<!-- Main Prototype Shell Container -->
+<div class="relative w-full max-w-[420px] h-[100dvh] md:h-[844px] bg-[#fef9ee] md:rounded-[44px] shadow-2xl overflow-hidden flex flex-col border border-[#f0e7d5]/60">
+<!-- Top App Bar -->
+<header class="relative z-10 px-6 pt-12 pb-3 flex items-center justify-between">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-[#735738] hover:bg-[#ebd9bd]/40 tap-active transition-colors" id="backBtn">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+</svg>
+</button>
+<h1 class="text-[20px] font-bold tracking-tight text-[#2c1808]">Reminders</h1>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-[#d96500] hover:bg-[#ff8a1f]/10 tap-active transition-all" id="addReminderBtn" title="Add reminder">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</button>
+</header>
+<!-- Reminders List -->
+<main class="flex-1 overflow-y-auto px-6 pt-2 pb-3 space-y-3 custom-scroll" id="reminderList">
+<!-- Cards rendered dynamically via JS -->
+</main>
+<!-- Empty State helper (hidden by default) -->
+<div class="hidden flex-1 flex-col items-center justify-center px-8 text-center" id="emptyState">
+<div class="w-16 h-16 rounded-full bg-[#f4ebd9] flex items-center justify-center text-[#bfa07e] mb-4">
+<svg class="w-8 h-8" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<p class="text-base font-semibold text-[#543b22]">No reminders yet</p>
+<p class="text-xs text-[#8f7052] mt-1 mb-6">Tap the plus button above to add a gentle daily prompt.</p>
+<button class="px-5 py-2.5 rounded-full bg-[#f57c00] text-white text-sm font-semibold shadow-md shadow-[#f57c00]/20 tap-active" id="emptyAddBtn">
+        + Add Reminder
+      </button>
+</div>
+<!-- Bottom Indicator / Home indicator bar -->
+<div class="w-full py-4 flex justify-center items-center pointer-events-none">
+<div class="w-32 h-1 rounded-full bg-[#3c2410]/20"></div>
+</div>
+<!-- ======================================================== -->
+<!-- BOTTOM SHEET (MODAL TIME PICKER) -->
+<!-- ======================================================== -->
+<!-- Scrim Backdrop (Opened by default) -->
+<div class="absolute inset-0 bg-black/35 backdrop-blur-[2px] z-30 opacity-100 scrim-transition" id="modalScrim"></div>
+<!-- Bottom Sheet Content (Opened by default) -->
+<div class="absolute left-0 right-0 bottom-0 z-40 bg-white rounded-t-[36px] shadow-2xl p-6 pt-3 sheet-transition flex flex-col border-t border-[#f4ecd9]" id="timeSheet">
+<!-- Grabber handle -->
+<div class="w-full flex justify-center py-2">
+<div class="w-10 h-1 rounded-full bg-[#d6c9b6]"></div>
+</div>
+<!-- Sheet Header: Cancel | Title | Spacer (No top save button) -->
+<div class="flex items-center justify-between pb-4 pt-1 px-1">
+<button class="text-[15px] font-semibold text-[#66513e] hover:text-[#2c1808] px-2 py-1.5 rounded-lg tap-active" id="cancelSheetBtn">
+          Cancel
+        </button>
+<h2 class="text-[17px] font-bold text-[#231508] -translate-x-1" id="sheetTitle">Edit Time</h2>
+<div class="w-14"></div>
+</div>
+<!-- Time Picker Selection Zone with Independent Shaded Boxes for Hour and Minute -->
+<div class="relative py-5 flex items-center justify-center">
+<!-- Drum Picker Columns Container -->
+<div class="relative z-10 flex items-center justify-center gap-4">
+<!-- Hours Column with its own distinct shaded box -->
+<div class="flex flex-col items-center">
+<button class="text-sm font-semibold text-[#b8956e] py-1 tap-active hover:text-[#7a3900] transition-colors" id="prevHour">07</button>
+<div class="w-[82px] h-[68px] bg-[#f4efe4] border border-[#e8ded0] rounded-[22px] flex items-center justify-center shadow-sm my-1.5">
+<span class="text-[40px] font-extrabold text-[#7a3900] tracking-tight leading-none select-none" id="currHour">08</span>
+</div>
+<button class="text-sm font-semibold text-[#b8956e] py-1 tap-active hover:text-[#7a3900] transition-colors" id="nextHour">09</button>
+</div>
+<!-- Colon Separator -->
+<div class="text-[34px] font-bold text-[#8a6845] self-center pb-1 px-1">:</div>
+<!-- Minutes Column with its own distinct shaded box -->
+<div class="flex flex-col items-center">
+<button class="text-sm font-semibold text-[#b8956e] py-1 tap-active hover:text-[#7a3900] transition-colors" id="prevMin">29</button>
+<div class="w-[82px] h-[68px] bg-[#f4efe4] border border-[#e8ded0] rounded-[22px] flex items-center justify-center shadow-sm my-1.5">
+<span class="text-[40px] font-extrabold text-[#7a3900] tracking-tight leading-none select-none" id="currMin">30</span>
+</div>
+<button class="text-sm font-semibold text-[#b8956e] py-1 tap-active hover:text-[#7a3900] transition-colors" id="nextMin">31</button>
+</div>
+<!-- AM/PM Toggle Pill - Matching shaded box background styling -->
+<div class="ml-4 flex flex-col bg-[#f4efe4] border border-[#e8ded0] p-1.5 rounded-[22px] shadow-sm self-center gap-1">
+<button class="px-3.5 py-2 rounded-[16px] text-xs font-bold transition-all bg-[#f57c00] text-white shadow-sm" id="btnAM">
+              AM
+            </button>
+<button class="px-3.5 py-2 rounded-[16px] text-xs font-bold transition-all text-[#735738] hover:text-[#38230f]" id="btnPM">
+              PM
+            </button>
+</div>
+</div>
+</div>
+<!-- Prominent Bottom Save Button Row -->
+<div class="pt-4 pb-2">
+<button class="w-full py-3.5 px-6 rounded-full bg-[#f57c00] hover:bg-[#e06d00] active:scale-[0.98] text-white text-[16px] font-bold tracking-wide shadow-md shadow-[#f57c00]/25 tap-active transition-all flex items-center justify-center" id="saveSheetBtn">
+          Save
+        </button>
+</div>
+</div>
+<!-- Notification Toast -->
+<div class="absolute top-14 left-1/2 -translate-x-1/2 z-50 bg-[#2b190a] text-[#fef9ee] px-4 py-2 rounded-full text-xs font-semibold shadow-lg opacity-0 pointer-events-none transition-all duration-300" id="toast">
+      Reminder saved
+    </div>
+</div>
+<script>
+    // State
+    let reminders = [
+      { id: 1, hour: 8, minute: 30, period: 'AM' },
+      { id: 2, hour: 1, minute: 15, period: 'PM' },
+      { id: 3, hour: 9, minute: 0, period: 'PM' },
+      { id: 4, hour: 10, minute: 30, period: 'AM' }
+    ];
+
+    let currentEditingId = 1; // Open on first reminder by default
+    let tempHour = 8;
+    let tempMinute = 30;
+    let tempPeriod = 'AM';
+
+    // DOM Elements
+    const reminderList = document.getElementById('reminderList');
+    const emptyState = document.getElementById('emptyState');
+    const modalScrim = document.getElementById('modalScrim');
+    const timeSheet = document.getElementById('timeSheet');
+    const sheetTitle = document.getElementById('sheetTitle');
+    const saveSheetBtn = document.getElementById('saveSheetBtn');
+    const toast = document.getElementById('toast');
+
+    const currHourEl = document.getElementById('currHour');
+    const currMinEl = document.getElementById('currMin');
+    const prevHourEl = document.getElementById('prevHour');
+    const nextHourEl = document.getElementById('nextHour');
+    const prevMinEl = document.getElementById('prevMin');
+    const nextMinEl = document.getElementById('nextMin');
+    const btnAM = document.getElementById('btnAM');
+    const btnPM = document.getElementById('btnPM');
+
+    function padZero(num) {
+      return num < 10 ? '0' + num : '' + num;
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', '-translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', '-translate-y-2');
+      }, 2000);
+    }
+
+    function renderReminders() {
+      if (reminders.length === 0) {
+        reminderList.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      reminderList.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+
+      reminderList.innerHTML = '';
+      reminders.forEach((r) => {
+        const card = document.createElement('div');
+        card.className = 'group relative overflow-hidden rounded-[26px] bg-white shadow-sm border border-[#f5ebd9] hover:border-[#ebdcc4] transition-all tap-active cursor-pointer';
+        
+        card.innerHTML = `
+          <div class="flex items-center justify-between px-6 py-4">
+            <div class="flex items-baseline gap-2">
+              <span class="text-[28px] font-bold tracking-tight text-[#2b1704] leading-none">
+                ${padZero(r.hour)}:${padZero(r.minute)}
+              </span>
+              <span class="text-sm font-bold text-[#8a6845] tracking-wide">
+                ${r.period}
+              </span>
+            </div>
+
+            <div class="flex items-center">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#c2a483] group-hover:text-[#f57c00] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          openSheet(r.id);
+        });
+
+        reminderList.appendChild(card);
+      });
+    }
+
+    function updatePickerDisplay() {
+      currHourEl.textContent = padZero(tempHour);
+      currMinEl.textContent = padZero(tempMinute);
+
+      const prevH = tempHour === 1 ? 12 : tempHour - 1;
+      const nextH = tempHour === 12 ? 1 : tempHour + 1;
+      prevHourEl.textContent = padZero(prevH);
+      nextHourEl.textContent = padZero(nextH);
+
+      const prevM = tempMinute === 0 ? 59 : tempMinute - 1;
+      const nextM = tempMinute === 59 ? 0 : tempMinute + 1;
+      prevMinEl.textContent = padZero(prevM);
+      nextMinEl.textContent = padZero(nextM);
+
+      if (tempPeriod === 'AM') {
+        btnAM.className = 'px-3.5 py-2 rounded-[16px] text-xs font-bold transition-all bg-[#f57c00] text-white shadow-sm';
+        btnPM.className = 'px-3.5 py-2 rounded-[16px] text-xs font-bold transition-all text-[#735738] hover:text-[#38230f]';
+      } else {
+        btnPM.className = 'px-3.5 py-2 rounded-[16px] text-xs font-bold transition-all bg-[#f57c00] text-white shadow-sm';
+        btnAM.className = 'px-3.5 py-2 rounded-[16px] text-xs font-bold transition-all text-[#735738] hover:text-[#38230f]';
+      }
+    }
+
+    function openSheet(reminderId = null) {
+      currentEditingId = reminderId;
+
+      if (reminderId !== null) {
+        const item = reminders.find(r => r.id === reminderId);
+        if (item) {
+          tempHour = item.hour;
+          tempMinute = item.minute;
+          tempPeriod = item.period;
+        }
+        sheetTitle.textContent = 'Edit Time';
+      } else {
+        tempHour = 8;
+        tempMinute = 0;
+        tempPeriod = 'AM';
+        sheetTitle.textContent = 'New Reminder';
+      }
+
+      updatePickerDisplay();
+
+      // Show modal & sheet
+      modalScrim.classList.remove('pointer-events-none', 'opacity-0');
+      modalScrim.classList.add('opacity-100');
+      timeSheet.classList.remove('translate-y-full');
+    }
+
+    function closeSheet() {
+      modalScrim.classList.remove('opacity-100');
+      modalScrim.classList.add('opacity-0', 'pointer-events-none');
+      timeSheet.classList.add('translate-y-full');
+      currentEditingId = null;
+    }
+
+    // Step Hours
+    function stepHour(direction) {
+      if (direction === 'up') {
+        tempHour = tempHour === 12 ? 1 : tempHour + 1;
+      } else {
+        tempHour = tempHour === 1 ? 12 : tempHour - 1;
+      }
+      updatePickerDisplay();
+    }
+
+    // Step Minutes
+    function stepMinute(delta) {
+      let totalMin = tempMinute + delta;
+      if (totalMin >= 60) {
+        totalMin = totalMin % 60;
+      } else if (totalMin < 0) {
+        totalMin = (totalMin % 60 + 60) % 60;
+      }
+      tempMinute = totalMin;
+      updatePickerDisplay();
+    }
+
+    // Event Listeners
+    document.getElementById('addReminderBtn').addEventListener('click', () => openSheet(null));
+    document.getElementById('emptyAddBtn').addEventListener('click', () => openSheet(null));
+    document.getElementById('cancelSheetBtn').addEventListener('click', closeSheet);
+    modalScrim.addEventListener('click', closeSheet);
+
+    document.getElementById('prevHour').addEventListener('click', () => stepHour('down'));
+    document.getElementById('nextHour').addEventListener('click', () => stepHour('up'));
+    document.getElementById('prevMin').addEventListener('click', () => stepMinute(-1));
+    document.getElementById('nextMin').addEventListener('click', () => stepMinute(1));
+
+    btnAM.addEventListener('click', () => {
+      tempPeriod = 'AM';
+      updatePickerDisplay();
+    });
+
+    btnPM.addEventListener('click', () => {
+      tempPeriod = 'PM';
+      updatePickerDisplay();
+    });
+
+    // Save reminder
+    saveSheetBtn.addEventListener('click', () => {
+      if (currentEditingId !== null) {
+        const item = reminders.find(r => r.id === currentEditingId);
+        if (item) {
+          item.hour = tempHour;
+          item.minute = tempMinute;
+          item.period = tempPeriod;
+          showToast(`Updated to ${padZero(tempHour)}:${padZero(tempMinute)} ${tempPeriod}`);
+        }
+      } else {
+        const newId = reminders.length > 0 ? Math.max(...reminders.map(r => r.id)) + 1 : 1;
+        reminders.push({
+          id: newId,
+          hour: tempHour,
+          minute: tempMinute,
+          period: tempPeriod
+        });
+        showToast(`Added ${padZero(tempHour)}:${padZero(tempMinute)} ${tempPeriod}`);
+      }
+      renderReminders();
+      closeSheet();
+    });
+
+    // Initial render and open modal by default
+    renderReminders();
+    updatePickerDisplay();
+  </script>
+</body></html>

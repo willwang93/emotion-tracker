@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -6,12 +6,28 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  Switch,
+  Animated,
+  PanResponder,
+  Dimensions,
+  Easing,
+  TouchableWithoutFeedback,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 import { ReminderSetting } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
+import { fonts } from '../theme';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SWIPE_DELETE_THRESHOLD = -85;
+const ITEM_HEIGHT = 64;
+
+const HOURS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const HOUR_OFFSETS = HOURS.map((_, i) => i * ITEM_HEIGHT);
+const MINUTE_OFFSETS = MINUTES.map((_, i) => i * ITEM_HEIGHT);
 
 interface Props {
   visible: boolean;
@@ -20,14 +36,149 @@ interface Props {
   onSaveSettings: (setting: ReminderSetting) => void;
 }
 
-function parseTimeDisplay(t: string): string {
-  const [hStr, mStr] = (t || '09:00').split(':');
+function padZero(num: number): string {
+  return num < 10 ? `0${num}` : `${num}`;
+}
+
+function parseTimeDisplay(t: string): { hour12: number; minute: number; period: 'AM' | 'PM'; display: string } {
+  const [hStr, mStr] = (t || '08:00').split(':');
   const h = parseInt(hStr, 10) || 0;
   const m = parseInt(mStr, 10) || 0;
-  const period = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  const period: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return {
+    hour12,
+    minute: m,
+    period,
+    display: `${padZero(hour12)}:${padZero(m)}`,
+  };
 }
+
+function formatTimeTo24(hour12: number, minute: number, period: 'AM' | 'PM'): string {
+  let h24 = hour12;
+  if (period === 'PM') {
+    h24 = hour12 === 12 ? 12 : hour12 + 12;
+  } else {
+    h24 = hour12 === 12 ? 0 : hour12;
+  }
+  return `${padZero(h24)}:${padZero(minute)}`;
+}
+
+// Swipeable Reminder Card with left swipe-to-delete
+interface SwipeableCardProps {
+  timeStr: string;
+  onPress: () => void;
+  onDelete: () => void;
+  theme: any;
+  isDark: boolean;
+}
+
+const SwipeableReminderCard: React.FC<SwipeableCardProps> = ({
+  timeStr,
+  onPress,
+  onDelete,
+  theme,
+  isDark,
+}) => {
+  const parsed = parseTimeDisplay(timeStr);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isSwiping = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        return isHorizontal && gestureState.dx < -10;
+      },
+      onPanResponderGrant: () => {
+        isSwiping.current = true;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx < 0) {
+          translateX.setValue(gestureState.dx);
+        } else {
+          translateX.setValue(0);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < SWIPE_DELETE_THRESHOLD) {
+          Animated.timing(translateX, {
+            toValue: -SCREEN_WIDTH,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            onDelete();
+          });
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        }
+        setTimeout(() => {
+          isSwiping.current = false;
+        }, 120);
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+        isSwiping.current = false;
+      },
+    })
+  ).current;
+
+  const handleCardPress = () => {
+    if (!isSwiping.current) {
+      onPress();
+    }
+  };
+
+  return (
+    <View style={styles.swipeWrapper}>
+      {/* Background Delete Action */}
+      <View style={styles.deleteBackground}>
+        <MaterialIcons name="delete-outline" size={22} color="#FFFFFF" style={styles.deleteIcon} />
+        <Text style={styles.deleteBackgroundText}>DELETE</Text>
+      </View>
+
+      {/* Foreground Swipeable Card */}
+      <Animated.View
+        style={[
+          styles.cardForeground,
+          {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            transform: [{ translateX }],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity
+          style={styles.cardInner}
+          onPress={handleCardPress}
+          activeOpacity={0.8}
+        >
+          <View style={styles.cardTimeGroup}>
+            <Text style={[styles.cardTimeText, { color: theme.text }]}>
+              {parsed.display}
+            </Text>
+            <Text style={[styles.cardPeriodText, { color: isDark ? theme.textSecondary : '#8A6845' }]}>
+              {parsed.period}
+            </Text>
+          </View>
+
+          <View style={styles.cardChevronContainer}>
+            <MaterialIcons name="chevron-right" size={22} color={theme.textMuted} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+};
 
 export const ReminderModal: React.FC<Props> = ({
   visible,
@@ -36,427 +187,591 @@ export const ReminderModal: React.FC<Props> = ({
   onSaveSettings,
 }) => {
   const { theme, isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [times, setTimes] = useState<string[]>(setting.times || []);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const minuteInputRef = useRef<TextInput>(null);
+  // Drum picker temp values
+  const [tempHour, setTempHour] = useState<number>(8);
+  const [tempMinute, setTempMinute] = useState<number>(30);
+  const [tempPeriod, setTempPeriod] = useState<'AM' | 'PM'>('AM');
 
-  // Time editing state
-  const [pickerHourText, setPickerHourText] = useState<string>('09');
-  const [pickerMinuteText, setPickerMinuteText] = useState<string>('00');
-  const [pickerPeriod, setPickerPeriod] = useState<'AM' | 'PM'>('AM');
-  const [focusedField, setFocusedField] = useState<'hour' | 'minute' | null>(null);
+  // Animated values
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const dragY = useRef(new Animated.Value(0)).current;
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Keep times state synchronized whenever setting prop updates from database
+  // Scroll references for wheel pickers
+  const hourScrollRef = useRef<ScrollView>(null);
+  const minuteScrollRef = useRef<ScrollView>(null);
+
+  // Synchronize times when prop updates
   useEffect(() => {
     if (setting?.times) {
       setTimes(setting.times);
     }
   }, [setting.times]);
 
-  // When modal becomes visible, reset times from latest setting and clear editing
+  // Reset when modal opens
   useEffect(() => {
     if (visible) {
       setTimes(setting.times || []);
+      setIsSheetOpen(false);
       setEditingIndex(null);
-      setFocusedField(null);
+      sheetAnim.setValue(0);
+      fadeAnim.setValue(0);
+      dragY.setValue(0);
+      toastAnim.setValue(0);
     }
   }, [visible]);
 
-  const openPickerForIndex = (idx: number) => {
-    if (editingIndex === idx) {
-      setEditingIndex(null);
-      return;
+  // Scroll wheels into position when sheet opens
+  useEffect(() => {
+    if (isSheetOpen) {
+      const timer = setTimeout(() => {
+        const hourIdx = Math.max(0, HOURS.indexOf(tempHour));
+        hourScrollRef.current?.scrollTo({ y: hourIdx * ITEM_HEIGHT, animated: false });
+        minuteScrollRef.current?.scrollTo({ y: tempMinute * ITEM_HEIGHT, animated: false });
+      }, 60);
+      return () => clearTimeout(timer);
     }
-    const t = times[idx] || '09:00';
-    const [hStr, mStr] = t.split(':');
-    const h = parseInt(hStr, 10) || 0;
-    const m = parseInt(mStr, 10) || 0;
-    setPickerPeriod(h >= 12 ? 'PM' : 'AM');
-    const h12 = h % 12 === 0 ? 12 : h % 12;
-    setPickerHourText(String(h12));
-    setPickerMinuteText(String(m).padStart(2, '0'));
-    setEditingIndex(idx);
-  };
+  }, [isSheetOpen]);
 
-  const handleHourChange = (val: string) => {
-    const cleaned = val.replace(/[^0-9]/g, '');
-    setPickerHourText(cleaned);
-    const num = parseInt(cleaned, 10);
-    if (cleaned.length === 2 || (num >= 2 && num <= 9 && cleaned.length === 1)) {
-      minuteInputRef.current?.focus();
-    }
-  };
-
-  const handleHourBlur = () => {
-    setFocusedField(null);
-    let num = parseInt(pickerHourText, 10);
-    if (isNaN(num) || num < 1) num = 12;
-    if (num > 12) num = 12;
-    setPickerHourText(String(num));
-  };
-
-  const handleMinuteChange = (val: string) => {
-    const cleaned = val.replace(/[^0-9]/g, '');
-    if (cleaned.length <= 2) {
-      setPickerMinuteText(cleaned);
-    }
-  };
-
-  const handleMinuteBlur = () => {
-    setFocusedField(null);
-    let num = parseInt(pickerMinuteText, 10);
-    if (isNaN(num) || num < 0) num = 0;
-    if (num > 59) num = 59;
-    setPickerMinuteText(String(num).padStart(2, '0'));
-  };
-
-  const handleAddNewTime = () => {
-    let hour = 12;
-    let newTime = '12:00';
-    while (times.includes(newTime) && hour < 23) {
-      hour++;
-      newTime = `${String(hour).padStart(2, '0')}:00`;
-    }
-    const updated = [...times, newTime];
-    setTimes(updated);
-    setPickerPeriod('PM');
-    setPickerHourText(String(hour > 12 ? hour - 12 : hour));
-    setPickerMinuteText('00');
-    setEditingIndex(updated.length - 1);
-    onSaveSettings({
-      ...setting,
-      times: updated,
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    toastAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(toastAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1800),
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setToastMessage(null);
     });
   };
 
-  const handleDeleteTime = (idx: number) => {
+  const openSheet = (idx: number | null) => {
+    if (idx !== null && times[idx]) {
+      const parsed = parseTimeDisplay(times[idx]);
+      setTempHour(parsed.hour12);
+      setTempMinute(parsed.minute);
+      setTempPeriod(parsed.period);
+      setEditingIndex(idx);
+    } else {
+      setTempHour(8);
+      setTempMinute(30);
+      setTempPeriod('AM');
+      setEditingIndex(null);
+    }
+
+    dragY.setValue(0);
+    sheetAnim.setValue(0);
+    fadeAnim.setValue(0);
+    setIsSheetOpen(true);
+    Animated.parallel([
+      Animated.timing(sheetAnim, {
+        toValue: 1,
+        duration: 340,
+        easing: Easing.bezier(0.2, 0.9, 0.3, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 280,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeSheet = () => {
+    Animated.parallel([
+      Animated.timing(sheetAnim, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsSheetOpen(false);
+      setEditingIndex(null);
+      dragY.setValue(0);
+      sheetAnim.setValue(0);
+    });
+  };
+
+  // PanResponder on bottom sheet grabber / header to allow swipe-down to dismiss
+  const sheetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          dragY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 90 || gestureState.vy > 0.6) {
+          closeSheet();
+        } else {
+          Animated.spring(dragY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(dragY, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
+  // Wheel scroll handlers with programmatic alignment correction
+  const handleHourScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const index = Math.round(y / ITEM_HEIGHT);
+    const clamped = Math.max(0, Math.min(HOURS.length - 1, index));
+    const h = HOURS[clamped];
+    if (h !== undefined && h !== tempHour) {
+      setTempHour(h);
+    }
+    const targetY = clamped * ITEM_HEIGHT;
+    if (Math.abs(y - targetY) > 0.5) {
+      hourScrollRef.current?.scrollTo({ y: targetY, animated: true });
+    }
+  };
+
+  const handleMinuteScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const index = Math.round(y / ITEM_HEIGHT);
+    const clamped = Math.max(0, Math.min(MINUTES.length - 1, index));
+    const m = MINUTES[clamped];
+    if (m !== undefined && m !== tempMinute) {
+      setTempMinute(m);
+    }
+    const targetY = clamped * ITEM_HEIGHT;
+    if (Math.abs(y - targetY) > 0.5) {
+      minuteScrollRef.current?.scrollTo({ y: targetY, animated: true });
+    }
+  };
+
+  const handleSaveSheet = () => {
+    const formatted = formatTimeTo24(tempHour, tempMinute, tempPeriod);
+    let updated = [...times];
+    if (editingIndex !== null) {
+      updated[editingIndex] = formatted;
+      triggerToast(`Updated to ${padZero(tempHour)}:${padZero(tempMinute)} ${tempPeriod}`);
+    } else {
+      updated.push(formatted);
+      triggerToast(`Added ${padZero(tempHour)}:${padZero(tempMinute)} ${tempPeriod}`);
+    }
+
+    updated.sort();
+    setTimes(updated);
+    onSaveSettings({
+      ...setting,
+      enabled: true,
+      times: updated,
+    });
+    closeSheet();
+  };
+
+  const handleDeleteCard = (idx: number) => {
     const updated = times.filter((_, i) => i !== idx);
     setTimes(updated);
-    if (editingIndex === idx) {
-      setEditingIndex(null);
-    } else if (editingIndex !== null && editingIndex > idx) {
-      setEditingIndex(editingIndex - 1);
-    }
     onSaveSettings({
       ...setting,
       times: updated,
     });
+    triggerToast('Reminder deleted');
   };
 
-  const handleSavePickerTime = () => {
-    if (editingIndex === null) return;
+  const sheetTranslateY = sheetAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SCREEN_HEIGHT * 0.7, 0],
+  });
 
-    let h = parseInt(pickerHourText, 10);
-    if (isNaN(h) || h < 1) h = 12;
-    if (h > 12) h = 12;
+  const combinedTranslateY = Animated.add(sheetTranslateY, dragY);
 
-    let m = parseInt(pickerMinuteText, 10);
-    if (isNaN(m) || m < 0) m = 0;
-    if (m > 59) m = 59;
+  const scrimOpacity = fadeAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.45],
+  });
 
-    let h24 = h;
-    if (pickerPeriod === 'PM') {
-      h24 = h === 12 ? 12 : h + 12;
-    } else {
-      h24 = h === 12 ? 0 : h;
-    }
-
-    const formatted = `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    const updated = [...times];
-    updated[editingIndex] = formatted;
-    setTimes(updated);
-    setEditingIndex(null);
-
-    onSaveSettings({
-      ...setting,
-      times: updated,
-    });
-  };
-
-  const handleDone = () => {
-    let currentTimes = times;
-    if (editingIndex !== null) {
-      let h = parseInt(pickerHourText, 10);
-      if (isNaN(h) || h < 1) h = 12;
-      if (h > 12) h = 12;
-
-      let m = parseInt(pickerMinuteText, 10);
-      if (isNaN(m) || m < 0) m = 0;
-      if (m > 59) m = 59;
-
-      let h24 = h;
-      if (pickerPeriod === 'PM') {
-        h24 = h === 12 ? 12 : h + 12;
-      } else {
-        h24 = h === 12 ? 0 : h;
-      }
-
-      const formatted = `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      currentTimes = [...times];
-      currentTimes[editingIndex] = formatted;
-    }
-    onSaveSettings({
-      ...setting,
-      times: currentTimes,
-    });
-    onClose();
-  };
+  const toastTranslateY = toastAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-10, 0],
+  });
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleDone}
+      transparent={false}
+      statusBarTranslucent={true}
+      onRequestClose={onClose}
     >
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-        {/* Top Masthead */}
-        <View style={styles.topBar}>
-          <Text style={[styles.modalTitle, { color: theme.text }]}>Settings</Text>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor: theme.background,
+            paddingTop: Math.max(insets.top, 16),
+            paddingBottom: Math.max(insets.bottom, 16),
+          },
+        ]}
+      >
+        {/* Top Header matching app navigation patterns */}
+        <View style={styles.topHeader}>
           <TouchableOpacity
-            onPress={handleDone}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            onPress={onClose}
+            style={styles.headerBackBtn}
+            activeOpacity={0.7}
+            accessibilityLabel="Back"
           >
-            <Text style={[styles.doneBtnText, { color: theme.textMuted }]}>Done</Text>
+            <MaterialIcons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Reminders</Text>
+
+          <TouchableOpacity
+            onPress={() => openSheet(null)}
+            style={[styles.headerIconButton, { backgroundColor: theme.btnPrimaryBg }]}
+            activeOpacity={0.85}
+            accessibilityLabel="Add reminder"
+          >
+            <MaterialIcons name="add" size={22} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Settings Card */}
-          <View
-            style={[
-              styles.settingsCard,
-              {
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-              },
-            ]}
-          >
-            {/* Master Toggle Row */}
-            <View style={styles.masterToggleRow}>
-              <Text style={[styles.masterToggleText, { color: theme.text }]}>
-                Daily Reminders
-              </Text>
-              <Switch
-                value={setting.enabled}
-                onValueChange={(val) => onSaveSettings({ ...setting, enabled: val })}
-                thumbColor={setting.enabled ? '#F59E0B' : undefined}
-                trackColor={{ false: theme.border, true: 'rgba(245, 158, 11, 0.4)' }}
+        {/* Swipe hint */}
+        {times.length > 0 && (
+          <View style={styles.hintContainer}>
+            <Text style={[styles.hintText, { color: theme.textMuted }]}>
+              Swipe left on a reminder to delete
+            </Text>
+          </View>
+        )}
+
+        {/* Main Content: List or Empty State */}
+        {times.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View
+              style={[
+                styles.emptyIconCircle,
+                { backgroundColor: theme.surfaceContainer },
+              ]}
+            >
+              <MaterialIcons
+                name="notifications-none"
+                size={32}
+                color={theme.textMuted}
               />
             </View>
-
-            <View style={[styles.cardDivider, { backgroundColor: theme.border }]} />
-
-            {/* List of Reminder Time Rows */}
-            <View style={styles.timesContainer}>
-              {times.map((t, idx) => {
-                const isSelected = editingIndex === idx;
-                return (
-                  <View key={`${t}-${idx}`} style={styles.reminderRowWrapper}>
-                    <View style={styles.reminderRow}>
-                      <Text style={[styles.reminderLabel, { color: theme.textSecondary }]}>
-                        Reminder {idx + 1}
-                      </Text>
-
-                      <View style={styles.reminderRightActions}>
-                        <TouchableOpacity
-                          activeOpacity={0.75}
-                          onPress={() => openPickerForIndex(idx)}
-                          style={[
-                            styles.timePillBtn,
-                            {
-                              backgroundColor: theme.chipBg,
-                              borderColor: isSelected
-                                ? theme.text
-                                : theme.border,
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.timePillText, { color: theme.text }]}>
-                            {parseTimeDisplay(t)}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          onPress={() => handleDeleteTime(idx)}
-                          hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
-                          style={styles.deleteBtn}
-                        >
-                          <Text style={[styles.deleteBtnText, { color: theme.textMuted }]}>✕</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Inline Time Editor if this item is selected */}
-                    {isSelected && (
-                      <View
-                        style={[
-                          styles.editorCard,
-                          {
-                            backgroundColor: theme.surfaceElevated,
-                            borderColor: theme.border,
-                          },
-                        ]}
-                      >
-                        <View style={styles.editorRow}>
-                          {/* Hour Input */}
-                          <View style={styles.inputCol}>
-                            <Text style={[styles.pickerColLabel, { color: theme.textMuted }]}>HOUR</Text>
-                            <TextInput
-                              style={[
-                                styles.directTimeInput,
-                                {
-                                  color: theme.text,
-                                  backgroundColor: theme.surface,
-                                  borderColor:
-                                    focusedField === 'hour'
-                                      ? theme.text
-                                      : theme.border,
-                                  borderWidth: focusedField === 'hour' ? 2 : 1,
-                                },
-                              ]}
-                              value={pickerHourText}
-                              onChangeText={handleHourChange}
-                              onFocus={() => setFocusedField('hour')}
-                              onBlur={handleHourBlur}
-                              keyboardType="number-pad"
-                              maxLength={2}
-                              selectTextOnFocus
-                              returnKeyType="next"
-                              onSubmitEditing={() => minuteInputRef.current?.focus()}
-                            />
-                          </View>
-
-                          <Text style={[styles.colonSeparator, { color: theme.textMuted }]}>:</Text>
-
-                          {/* Minute Input */}
-                          <View style={styles.inputCol}>
-                            <Text style={[styles.pickerColLabel, { color: theme.textMuted }]}>MIN</Text>
-                            <TextInput
-                              ref={minuteInputRef}
-                              style={[
-                                styles.directTimeInput,
-                                {
-                                  color: theme.text,
-                                  backgroundColor: theme.surface,
-                                  borderColor:
-                                    focusedField === 'minute'
-                                      ? theme.text
-                                      : theme.border,
-                                  borderWidth: focusedField === 'minute' ? 2 : 1,
-                                },
-                              ]}
-                              value={pickerMinuteText}
-                              onChangeText={handleMinuteChange}
-                              onFocus={() => setFocusedField('minute')}
-                              onBlur={handleMinuteBlur}
-                              keyboardType="number-pad"
-                              maxLength={2}
-                              selectTextOnFocus
-                              returnKeyType="done"
-                              onSubmitEditing={handleSavePickerTime}
-                            />
-                          </View>
-
-                          {/* Period Selector */}
-                          <View style={styles.periodCol}>
-                            <Text style={[styles.pickerColLabel, { color: theme.textMuted }]}>PERIOD</Text>
-                            <View style={styles.periodToggleRow}>
-                              {(['AM', 'PM'] as const).map((p) => {
-                                const isPActive = pickerPeriod === p;
-                                return (
-                                  <TouchableOpacity
-                                    key={p}
-                                    onPress={() => setPickerPeriod(p)}
-                                    style={[
-                                      styles.periodBtn,
-                                      isPActive
-                                        ? { backgroundColor: theme.text }
-                                        : {
-                                            borderColor: theme.border,
-                                            borderWidth: 1,
-                                            backgroundColor: theme.surface,
-                                          },
-                                    ]}
-                                  >
-                                    <Text
-                                      style={[
-                                        styles.periodBtnText,
-                                        {
-                                          color: isPActive
-                                            ? isDark
-                                              ? '#000000'
-                                              : '#FFFFFF'
-                                            : theme.textMuted,
-                                        },
-                                      ]}
-                                    >
-                                      {p}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
-                            </View>
-                          </View>
-                        </View>
-
-                        {/* Actions */}
-                        <View style={styles.editorActionRow}>
-                          <TouchableOpacity
-                            onPress={() => setEditingIndex(null)}
-                            style={[
-                              styles.cancelEditorBtn,
-                              {
-                                borderColor: theme.border,
-                              },
-                            ]}
-                          >
-                            <Text style={[styles.cancelEditorBtnText, { color: theme.textMuted }]}>
-                              Cancel
-                            </Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            onPress={handleSavePickerTime}
-                            style={[styles.saveTimeBtn, { backgroundColor: theme.text }]}
-                          >
-                            <Text style={[styles.saveTimeBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-                              Save Time
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-
-            <View style={[styles.cardDivider, { backgroundColor: theme.border }]} />
-
-            {/* + Add reminder Button */}
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>No reminders yet</Text>
             <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleAddNewTime}
+              onPress={() => openSheet(null)}
+              style={[styles.emptyAddButton, { backgroundColor: theme.btnPrimaryBg }]}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="add" size={20} color="#FFFFFF" style={styles.emptyAddButtonIcon} />
+              <Text style={styles.emptyAddButtonText}>Add reminder</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {times.map((t, idx) => (
+              <SwipeableReminderCard
+                key={`${t}-${idx}`}
+                timeStr={t}
+                onPress={() => openSheet(idx)}
+                onDelete={() => handleDeleteCard(idx)}
+                theme={theme}
+                isDark={isDark}
+              />
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Bottom Sheet Time Picker Overlay */}
+        {isSheetOpen && (
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            {/* Scrim Backdrop */}
+            <TouchableWithoutFeedback onPress={closeSheet}>
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFill,
+                  styles.scrim,
+                  { opacity: scrimOpacity },
+                ]}
+              />
+            </TouchableWithoutFeedback>
+
+            {/* Bottom Sheet Container */}
+            <Animated.View
               style={[
-                styles.addTimeBtn,
+                styles.bottomSheet,
                 {
-                  borderColor: theme.borderFocus,
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                  transform: [{ translateY: combinedTranslateY }],
                 },
               ]}
             >
-              <Text style={[styles.addTimeBtnText, { color: theme.textMuted }]}>+ Add reminder</Text>
-            </TouchableOpacity>
+              {/* Swipe down handle and header area */}
+              <View {...sheetPanResponder.panHandlers} style={styles.sheetTopDraggableArea}>
+                <View style={styles.grabberContainer}>
+                  <View
+                    style={[
+                      styles.grabber,
+                      { backgroundColor: isDark ? theme.border : '#D6C9B6' },
+                    ]}
+                  />
+                </View>
+
+                {/* Sheet Header: Cancel | Title | Spacer (NO delete button) */}
+                <View style={styles.sheetHeaderRow}>
+                  <TouchableOpacity
+                    onPress={closeSheet}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Text style={[styles.sheetCancelText, { color: theme.textSecondary }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text style={[styles.sheetTitle, { color: theme.text }]}>
+                    {editingIndex !== null ? 'Edit Time' : 'New Reminder'}
+                  </Text>
+
+                  {/* Empty spacer to keep title centered */}
+                  <View style={styles.headerSpacer} />
+                </View>
+              </View>
+
+              {/* Scrollable Drum Wheels Zone */}
+              <View style={styles.pickerZone}>
+                <View style={styles.pickerColumnsContainer}>
+                  {/* Hours Scroll Wheel */}
+                  <View style={styles.wheelColumn}>
+                    <View
+                      style={[
+                        styles.wheelSelectionBox,
+                        {
+                          backgroundColor: isDark ? theme.surfaceContainer : '#F4EFE4',
+                          borderColor: isDark ? theme.border : '#E8DED0',
+                        },
+                      ]}
+                      pointerEvents="none"
+                    />
+                    <ScrollView
+                      ref={hourScrollRef}
+                      style={styles.wheelScrollView}
+                      contentContainerStyle={styles.wheelScrollContent}
+                      showsVerticalScrollIndicator={false}
+                      snapToInterval={ITEM_HEIGHT}
+                      snapToOffsets={HOUR_OFFSETS}
+                      snapToAlignment="start"
+                      snapToStart={true}
+                      snapToEnd={false}
+                      decelerationRate="fast"
+                      onMomentumScrollEnd={handleHourScroll}
+                      onScrollEndDrag={handleHourScroll}
+                    >
+                      {HOURS.map((h, i) => {
+                        const isSelected = h === tempHour;
+                        return (
+                          <TouchableOpacity
+                            key={`h-${h}`}
+                            style={styles.wheelItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setTempHour(h);
+                              hourScrollRef.current?.scrollTo({ y: i * ITEM_HEIGHT, animated: true });
+                            }}
+                          >
+                            <Text
+                              style={[
+                                isSelected ? styles.wheelTextSelected : styles.wheelTextUnselected,
+                                isSelected
+                                  ? { color: isDark ? '#FFA726' : '#7A3900' }
+                                  : { color: theme.textMuted },
+                              ]}
+                            >
+                              {padZero(h)}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  {/* Colon Separator */}
+                  <Text style={[styles.colonText, { color: isDark ? theme.textSecondary : '#8A6845' }]}>
+                    :
+                  </Text>
+
+                  {/* Minutes Scroll Wheel */}
+                  <View style={styles.wheelColumn}>
+                    <View
+                      style={[
+                        styles.wheelSelectionBox,
+                        {
+                          backgroundColor: isDark ? theme.surfaceContainer : '#F4EFE4',
+                          borderColor: isDark ? theme.border : '#E8DED0',
+                        },
+                      ]}
+                      pointerEvents="none"
+                    />
+                    <ScrollView
+                      ref={minuteScrollRef}
+                      style={styles.wheelScrollView}
+                      contentContainerStyle={styles.wheelScrollContent}
+                      showsVerticalScrollIndicator={false}
+                      snapToInterval={ITEM_HEIGHT}
+                      snapToOffsets={MINUTE_OFFSETS}
+                      snapToAlignment="start"
+                      snapToStart={true}
+                      snapToEnd={false}
+                      decelerationRate="fast"
+                      onMomentumScrollEnd={handleMinuteScroll}
+                      onScrollEndDrag={handleMinuteScroll}
+                    >
+                      {MINUTES.map((m, i) => {
+                        const isSelected = m === tempMinute;
+                        return (
+                          <TouchableOpacity
+                            key={`m-${m}`}
+                            style={styles.wheelItem}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setTempMinute(m);
+                              minuteScrollRef.current?.scrollTo({ y: i * ITEM_HEIGHT, animated: true });
+                            }}
+                          >
+                            <Text
+                              style={[
+                                isSelected ? styles.wheelTextSelected : styles.wheelTextUnselected,
+                                isSelected
+                                  ? { color: isDark ? '#FFA726' : '#7A3900' }
+                                  : { color: theme.textMuted },
+                              ]}
+                            >
+                              {padZero(m)}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  {/* AM/PM Toggle Pill */}
+                  <View
+                    style={[
+                      styles.ampmContainer,
+                      {
+                        backgroundColor: isDark ? theme.surfaceContainer : '#F4EFE4',
+                        borderColor: isDark ? theme.border : '#E8DED0',
+                      },
+                    ]}
+                  >
+                    <TouchableOpacity
+                      onPress={() => setTempPeriod('AM')}
+                      style={[
+                        styles.ampmTab,
+                        tempPeriod === 'AM' && [styles.ampmTabActive, { backgroundColor: theme.btnPrimaryBg }],
+                      ]}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.ampmTabText,
+                          tempPeriod === 'AM'
+                            ? styles.ampmTabTextActive
+                            : { color: theme.textSecondary },
+                        ]}
+                      >
+                        AM
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setTempPeriod('PM')}
+                      style={[
+                        styles.ampmTab,
+                        tempPeriod === 'PM' && [styles.ampmTabActive, { backgroundColor: theme.btnPrimaryBg }],
+                      ]}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.ampmTabText,
+                          tempPeriod === 'PM'
+                            ? styles.ampmTabTextActive
+                            : { color: theme.textSecondary },
+                        ]}
+                      >
+                        PM
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Prominent Bottom Save Button */}
+              <View style={styles.sheetSaveContainer}>
+                <TouchableOpacity
+                  onPress={handleSaveSheet}
+                  style={[styles.sheetSaveButton, { backgroundColor: theme.btnPrimaryBg }]}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.sheetSaveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
           </View>
-        </ScrollView>
-      </SafeAreaView>
+        )}
+
+        {/* Toast feedback pill */}
+        {toastMessage && (
+          <Animated.View
+            style={[
+              styles.toast,
+              {
+                opacity: toastAnim,
+                transform: [{ translateY: toastTranslateY }],
+              },
+            ]}
+          >
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </Animated.View>
+        )}
+      </View>
     </Modal>
   );
 };
@@ -465,179 +780,359 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  topBar: {
-    height: 52,
+  topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  modalTitle: {
-    fontFamily: 'serif',
+  headerBackBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  headerTitle: {
     fontSize: 20,
-    fontWeight: '400',
+    fontFamily: fonts.bold,
     letterSpacing: -0.3,
   },
-  doneBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
+  hintContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 6,
+    paddingTop: 2,
   },
-  scroll: {
+  hintText: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    letterSpacing: 0.2,
+  },
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 40,
+    gap: 10,
   },
-  settingsCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
+  swipeWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
   },
-  masterToggleRow: {
+  deleteBackground: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#DC2626',
+    borderRadius: 20,
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 2,
+    paddingRight: 22,
   },
-  masterToggleText: {
-    fontSize: 14,
-    fontWeight: '600',
+  deleteIcon: {
+    marginRight: 6,
   },
-  cardDivider: {
-    height: 1,
-    marginVertical: 14,
-  },
-  timesContainer: {
-    gap: 12,
-  },
-  reminderRowWrapper: {
-    gap: 8,
-  },
-  reminderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  reminderLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  reminderRightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timePillBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  timePillText: {
+  deleteBackgroundText: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
     fontSize: 12,
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
+    letterSpacing: 1.2,
   },
-  deleteBtn: {
-    padding: 6,
-  },
-  deleteBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  editorCard: {
-    borderRadius: 16,
+  cardForeground: {
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 14,
-    marginTop: 4,
+  },
+  cardInner: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTimeGroup: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  cardTimeText: {
+    fontSize: 26,
+    fontFamily: fonts.bold,
+    letterSpacing: -0.5,
+  },
+  cardPeriodText: {
+    fontSize: 13,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.5,
+  },
+  cardChevronContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 60,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontFamily: fonts.bold,
     marginBottom: 6,
   },
-  editorRow: {
+  emptyAddButton: {
+    height: 46,
+    paddingHorizontal: 22,
+    borderRadius: 9999,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    justifyContent: 'center',
+    marginTop: 18,
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  inputCol: {
-    width: 56,
+  emptyAddButtonIcon: {
+    marginRight: 6,
   },
-  pickerColLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-    textAlign: 'center',
+  emptyAddButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
   },
-  directTimeInput: {
-    height: 38,
-    borderRadius: 8,
-    borderWidth: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+  scrim: {
+    backgroundColor: '#000000',
   },
-  colonSeparator: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 14,
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 16,
   },
-  periodCol: {
-    flex: 1,
-    marginLeft: 4,
+  sheetTopDraggableArea: {
+    paddingTop: 4,
+    paddingBottom: 4,
   },
-  periodToggleRow: {
+  grabberContainer: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  grabber: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+  },
+  sheetHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  sheetCancelText: {
+    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontFamily: fonts.bold,
+  },
+  headerSpacer: {
+    width: 48,
+  },
+  pickerZone: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerColumnsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    height: ITEM_HEIGHT * 3,
+  },
+  wheelColumn: {
+    width: 82,
+    height: ITEM_HEIGHT * 3,
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wheelSelectionBox: {
+    position: 'absolute',
+    top: ITEM_HEIGHT,
+    left: 0,
+    right: 0,
+    height: ITEM_HEIGHT,
+    borderRadius: 18,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  wheelScrollView: {
+    width: '100%',
+    height: ITEM_HEIGHT * 3,
+  },
+  wheelScrollContent: {
+    paddingVertical: ITEM_HEIGHT,
+    alignItems: 'center',
+  },
+  wheelItem: {
+    width: 82,
+    height: ITEM_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wheelTextSelected: {
+    fontSize: 36,
+    fontFamily: fonts.extraBold,
+    letterSpacing: -0.5,
+    includeFontPadding: false,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: ITEM_HEIGHT,
+  },
+  wheelTextUnselected: {
+    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    includeFontPadding: false,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: ITEM_HEIGHT,
+  },
+  colonText: {
+    fontSize: 32,
+    fontFamily: fonts.bold,
+    alignSelf: 'center',
+    includeFontPadding: false,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    lineHeight: ITEM_HEIGHT,
+  },
+  ampmContainer: {
+    flexDirection: 'column',
+    borderWidth: 1,
+    padding: 5,
+    borderRadius: 18,
     gap: 4,
+    marginLeft: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  periodBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 8,
+  ampmTab: {
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  periodBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
+  ampmTabActive: {
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  editorActionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cancelEditorBtn: {
-    flex: 1,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelEditorBtnText: {
+  ampmTabText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: fonts.bold,
   },
-  saveTimeBtn: {
-    flex: 1.5,
-    height: 36,
-    borderRadius: 8,
+  ampmTabTextActive: {
+    color: '#FFFFFF',
+  },
+  sheetSaveContainer: {
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  sheetSaveButton: {
+    height: 54,
+    borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#F57C00',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 4,
   },
-  saveTimeBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
+  sheetSaveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.3,
   },
-  addTimeBtn: {
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
+  toast: {
+    position: 'absolute',
+    top: 56,
+    alignSelf: 'center',
+    backgroundColor: '#2B190A',
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 9999,
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  addTimeBtnText: {
-    fontSize: 12,
-    fontWeight: '500',
+  toastText: {
+    color: '#FEF9EE',
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
   },
 });
-

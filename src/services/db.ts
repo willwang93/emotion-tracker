@@ -1,22 +1,46 @@
 import * as SQLite from 'expo-sqlite';
 import { CheckIn, ReminderSetting } from '../types';
 
-let dbInstance: SQLite.SQLiteDatabase | null = null;
-let isInitialized = false;
+const DB_NAME = 'emotion_tracker.db';
+
+declare global {
+  var __app_sqlite_db: SQLite.SQLiteDatabase | undefined;
+  var __app_sqlite_init_promise: Promise<SQLite.SQLiteDatabase> | undefined;
+  var __app_sqlite_is_initialized: boolean | undefined;
+}
 
 export async function getDatabase(forceNew = false): Promise<SQLite.SQLiteDatabase> {
-  if (!dbInstance || forceNew) {
-    dbInstance = await SQLite.openDatabaseAsync('emotion_tracker.db');
-    if (!isInitialized || forceNew) {
-      try {
-        await initDatabase(dbInstance);
-        isInitialized = true;
-      } catch (e: any) {
-        console.log('initDatabase notice:', e?.message || e);
-      }
-    }
+  if (globalThis.__app_sqlite_db && !forceNew) {
+    return globalThis.__app_sqlite_db;
   }
-  return dbInstance;
+
+  if (globalThis.__app_sqlite_init_promise && !forceNew) {
+    return globalThis.__app_sqlite_init_promise;
+  }
+
+  globalThis.__app_sqlite_init_promise = (async () => {
+    try {
+      const options = forceNew ? { useNewConnection: true } : undefined;
+      const db = await SQLite.openDatabaseAsync(DB_NAME, options);
+      if (!globalThis.__app_sqlite_is_initialized || forceNew) {
+        await initDatabase(db);
+        globalThis.__app_sqlite_is_initialized = true;
+      }
+      globalThis.__app_sqlite_db = db;
+      return db;
+    } catch (err: any) {
+      console.warn('Initial DB open or init failed, retrying with useNewConnection: true', err?.message || err);
+      const db = await SQLite.openDatabaseAsync(DB_NAME, { useNewConnection: true });
+      await initDatabase(db);
+      globalThis.__app_sqlite_is_initialized = true;
+      globalThis.__app_sqlite_db = db;
+      return db;
+    } finally {
+      globalThis.__app_sqlite_init_promise = undefined;
+    }
+  })();
+
+  return globalThis.__app_sqlite_init_promise;
 }
 
 export async function withDb<T>(operation: (db: SQLite.SQLiteDatabase) => Promise<T>): Promise<T> {
@@ -24,20 +48,22 @@ export async function withDb<T>(operation: (db: SQLite.SQLiteDatabase) => Promis
     const db = await getDatabase();
     return await operation(db);
   } catch (err: any) {
-    console.log('withDb attempting retry after error:', err?.message || err);
-    dbInstance = null;
-    isInitialized = false;
-    const newDb = await getDatabase(true);
-    return await operation(newDb);
+    console.warn('withDb caught error, retrying with fresh connection:', err?.message || err);
+    globalThis.__app_sqlite_db = undefined;
+    globalThis.__app_sqlite_is_initialized = false;
+    const freshDb = await getDatabase(true);
+    return await operation(freshDb);
   }
 }
 
 export function getDatabaseSync(): SQLite.SQLiteDatabase {
-  if (!dbInstance) {
-    dbInstance = SQLite.openDatabaseSync('emotion_tracker.db');
-    initDatabaseSync(dbInstance);
+  if (!globalThis.__app_sqlite_db) {
+    const db = SQLite.openDatabaseSync(DB_NAME);
+    initDatabaseSync(db);
+    globalThis.__app_sqlite_db = db;
+    globalThis.__app_sqlite_is_initialized = true;
   }
-  return dbInstance;
+  return globalThis.__app_sqlite_db;
 }
 
 function initDatabaseSync(db: SQLite.SQLiteDatabase) {
@@ -143,20 +169,20 @@ export async function insertCheckIn(checkIn: CheckIn): Promise<void> {
         context_what, context_where, trigger_note, urge_note, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
       [
-        checkIn.id,
-        checkIn.timestamp,
-        checkIn.quadrant,
-        checkIn.energyLevel,
-        checkIn.pleasantnessLevel,
-        checkIn.primaryEmotion,
-        checkIn.intensity,
+        String(checkIn.id || Date.now().toString()),
+        Number(checkIn.timestamp || Date.now()),
+        String(checkIn.quadrant || 'green'),
+        Number(checkIn.energyLevel ?? 5),
+        Number(checkIn.pleasantnessLevel ?? 5),
+        String(checkIn.primaryEmotion || 'Peaceful'),
+        Number(checkIn.intensity ?? 5),
         JSON.stringify(checkIn.somaticSensations || []),
         JSON.stringify(checkIn.contextWho || []),
         JSON.stringify(checkIn.contextWhat || []),
-        checkIn.contextWhere || null,
-        checkIn.triggerNote || null,
-        checkIn.urgeNote || null,
-        checkIn.createdAt,
+        checkIn.contextWhere ? String(checkIn.contextWhere) : null,
+        checkIn.triggerNote ? String(checkIn.triggerNote) : null,
+        checkIn.urgeNote ? String(checkIn.urgeNote) : null,
+        Number(checkIn.createdAt || Date.now()),
       ]
     );
   });
@@ -180,19 +206,19 @@ export async function updateCheckIn(checkIn: CheckIn): Promise<void> {
         urge_note = ?
       WHERE id = ?;`,
       [
-        checkIn.timestamp,
-        checkIn.quadrant,
-        checkIn.energyLevel,
-        checkIn.pleasantnessLevel,
-        checkIn.primaryEmotion,
-        checkIn.intensity,
+        Number(checkIn.timestamp || Date.now()),
+        String(checkIn.quadrant || 'green'),
+        Number(checkIn.energyLevel ?? 5),
+        Number(checkIn.pleasantnessLevel ?? 5),
+        String(checkIn.primaryEmotion || 'Peaceful'),
+        Number(checkIn.intensity ?? 5),
         JSON.stringify(checkIn.somaticSensations || []),
         JSON.stringify(checkIn.contextWho || []),
         JSON.stringify(checkIn.contextWhat || []),
-        checkIn.contextWhere || null,
-        checkIn.triggerNote || null,
-        checkIn.urgeNote || null,
-        checkIn.id,
+        checkIn.contextWhere ? String(checkIn.contextWhere) : null,
+        checkIn.triggerNote ? String(checkIn.triggerNote) : null,
+        checkIn.urgeNote ? String(checkIn.urgeNote) : null,
+        String(checkIn.id),
       ]
     );
   });

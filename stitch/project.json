@@ -1,0 +1,633 @@
+{
+  "createTime": "2026-09-15T21:30:48.730863Z",
+  "designTheme": {
+    "bodyFont": "NEWSREADER",
+    "bodyFontFamily": "Newsreader",
+    "colorMode": "LIGHT",
+    "colorVariant": "FIDELITY",
+    "customColor": "#d97757",
+    "designMd": "---\nname: Emotional Equilibrium\ncolors:\n  surface: '#fcf9f3'\n  surface-dim: '#dcdad4'\n  surface-bright: '#fcf9f3'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f6f3ed'\n  surface-container: '#f0eee8'\n  surface-container-high: '#ebe8e2'\n  surface-container-highest: '#e5e2dc'\n  on-surface: '#1c1c18'\n  on-surface-variant: '#55433d'\n  inverse-surface: '#31312d'\n  inverse-on-surface: '#f3f0ea'\n  outline: '#88726c'\n  outline-variant: '#dbc1b9'\n  surface-tint: '#99462a'\n  primary: '#99462a'\n  on-primary: '#ffffff'\n  primary-container: '#d97757'\n  on-primary-container: '#541400'\n  inverse-primary: '#ffb59e'\n  secondary: '#4a6452'\n  on-secondary: '#ffffff'\n  secondary-container: '#ccead2'\n  on-secondary-container: '#506a58'\n  tertiary: '#7a572d'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#b38a5b'\n  on-tertiary-container: '#3f2500'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#ffdbd0'\n  primary-fixed-dim: '#ffb59e'\n  on-primary-fixed: '#390b00'\n  on-primary-fixed-variant: '#7a2f15'\n  secondary-fixed: '#ccead2'\n  secondary-fixed-dim: '#b0ceb7'\n  on-secondary-fixed: '#062012'\n  on-secondary-fixed-variant: '#334c3b'\n  tertiary-fixed: '#ffddb9'\n  tertiary-fixed-dim: '#edbe8b'\n  on-tertiary-fixed: '#2b1700'\n  on-tertiary-fixed-variant: '#604018'\n  background: '#fcf9f3'\n  on-background: '#1c1c18'\n  surface-variant: '#e5e2dc'\ntypography:\n  display-lg:\n    fontFamily: Literata\n    fontSize: 48px\n    fontWeight: '400'\n    lineHeight: 56px\n    letterSpacing: -0.02em\n  display-lg-mobile:\n    fontFamily: Literata\n    fontSize: 34px\n    fontWeight: '400'\n    lineHeight: 42px\n    letterSpacing: -0.01em\n  headline-lg:\n    fontFamily: Literata\n    fontSize: 32px\n    fontWeight: '400'\n    lineHeight: 40px\n    letterSpacing: -0.01em\n  headline-lg-mobile:\n    fontFamily: Literata\n    fontSize: 26px\n    fontWeight: '400'\n    lineHeight: 34px\n  headline-md:\n    fontFamily: Literata\n    fontSize: 24px\n    fontWeight: '500'\n    lineHeight: 32px\n  headline-sm:\n    fontFamily: Literata\n    fontSize: 20px\n    fontWeight: '500'\n    lineHeight: 28px\n  title-md:\n    fontFamily: Newsreader\n    fontSize: 18px\n    fontWeight: '500'\n    lineHeight: 26px\n    letterSpacing: 0.005em\n  body-lg:\n    fontFamily: Newsreader\n    fontSize: 18px\n    fontWeight: '400'\n    lineHeight: 28px\n  body-md:\n    fontFamily: Newsreader\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n  body-sm:\n    fontFamily: Newsreader\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n  label-lg:\n    fontFamily: Manrope\n    fontSize: 14px\n    fontWeight: '600'\n    lineHeight: 20px\n    letterSpacing: 0.03em\n  label-md:\n    fontFamily: Manrope\n    fontSize: 12px\n    fontWeight: '500'\n    lineHeight: 16px\n    letterSpacing: 0.04em\n  label-sm:\n    fontFamily: Manrope\n    fontSize: 11px\n    fontWeight: '500'\n    lineHeight: 14px\n    letterSpacing: 0.05em\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  gutter-tablet: 1.5rem\n  gutter-desktop: 2rem\n  margin: 1.25rem\n  margin-tablet: 2.5rem\n  margin-desktop: 4rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2.5rem\n  space-2xl: 4rem\n---\n\n## Brand & Style\n\nThis design system establishes an intimate, non-judgmental digital sanctuary dedicated to affective awareness, somatic reflection, and emotional calibration. Designed for individuals navigating stress, neurodivergence, therapeutic journeys, or intentional mindful living, the interface refrains from clinical sterility and frantic gamification (such as intrusive streaks, aggressive badges, or jarring alerts). Instead, it cultivates grounding, gentle presence, and psychological safety.\n\nThe overarching design style synthesizes **Tactile Organic Warmth** with **Atmospheric Serenity**. It manifests across three interchangeable emotional sensory modes:\n- **Warm Botanical & Tactile Journal**: Rooted in physical analog practices, featuring organic fibers, deckled soft surfaces, grounded earth pigments, and literary warmth.\n- **Soft Atmospheric Gradient**: Ethereal and liminal, mapping emotional fluidity through diffused dawn and dusk gradients, frosted translucent vessels, and calm spatial depth.\n- **Minimal Zen (Nordic Earth)**: Stripped of cognitive excess, celebrating intentional whitespace, quiet structural precision, ink-on-sand clarity, and low-stimulus interactions.\n\nMotion across all visual modes is slow and restorative (spring physics, ease-in-out dampening, 300\u2013600ms transitions), treating interactions as mindful breaths rather than rapid operational triggers.\n\n## Colors\n\nThe core tokens define the foundation, while token variables dynamically adapt across three holistic sensory themes:\n\n### 1. Warm Botanical & Tactile Journal (Default Mode)\n- **Primary (`terracotta`)**: `#D97757` \u2014 Serves as the active grounding anchor, focal check-in buttons, and intense somatic heat markers.\n- **Secondary (`sage`)**: `#7E9A85` \u2014 Restorative balance, calm states, nature prompts, and soothing balance actions.\n- **Tertiary (`warm clay / apricot`)**: `#E8BA87` \u2014 Gentle highlights, mid-tier activation, warm card accents.\n- **Neutral Base (`linen oatmeal`)**: `#F9F6F0` \u2014 Canvas substrate mimicking raw, unbleached woven paper.\n- **Neutral Foreground (`umber ink`)**: `#382E2B` \u2014 Gentle deep brown for text, avoiding harsh synthetic blacks.\n- **Card Surface**: `#FFFFFF` with 70% opacity overlaid on canvas, carrying an subtle amber fiber tint (`#F4EFE6`).\n\n### 2. Soft Atmospheric Gradient (Meditative Mode)\n- **Primary (`dawn peach`)**: `#F7B297` \u2014 Soft awakening, primary luminous nodes, reflective indicators.\n- **Secondary (`mist blue`)**: `#9BB1C9` \u2014 Diffused clarity, emotional stillness, cool air states.\n- **Tertiary (`twilight lavender`)**: `#B3A4C8` \u2014 Introspective, transitional thresholds and subtle glows.\n- **Neutral Base (`dusk indigo`)**: `#2A2E43` \u2014 Deep evening backdrop that eliminates eye strain and cradles self-reflection.\n- **Neutral Foreground (`starlight cream`)**: `#F3F4F8` \u2014 Luminescent text with feathered contrast.\n- **Card Surface**: `rgba(255, 255, 255, 0.08)` backdrop with 24px progressive blur and 1px perimeter luminescence (`rgba(255, 255, 255, 0.16)`).\n\n### 3. Minimal Zen / Nordic Earth (Low-Stimulus Mode)\n- **Primary (`muted olive`)**: `#5E6953` \u2014 Quiet deliberate intention, purposeful interaction boundaries.\n- **Secondary (`dusty amber`)**: `#C49258` \u2014 Minimalist state markers, sparse emphasis points.\n- **Tertiary (`lichen grey`)**: `#98A08D` \u2014 Subdued metadata and auxiliary progress paths.\n- **Neutral Base (`warm bone / sand`)**: `#F5F2EC` \u2014 Matte mineral canvas eliminating glare.\n- **Neutral Foreground (`charcoal ink`)**: `#232323` \u2014 High-legibility Japanese Sumi-inspired text.\n- **Card Surface**: `#EDE8E0` \u2014 Flat, low-contrast tonal stepping without drop shadows.\n\n## Typography\n\nTypography establishes an intimate, conversational cadence that invites introspection rather than quick scanning.\n\n- **Editorial Body & Headlines (`Literata` & `Newsreader`)**: Soft, sculpted serifs provide literary gravitas, making user thoughts and reflections read like cherished prose in a personal ledger. Italic weights are systematically paired with emotion states and reflective journal prompts (e.g., *\"Where do you feel this in your chest right now?\"*).\n- **Functional Clarity (`Manrope`)**: A clean, geometric yet warm humanist sans-serif manages cognitive navigation, time stamps, valence sliders, somatic metrics, and interactive tags without competing with editorial introspection.\n- **Theme Adaptation**:\n  - In *Warm Botanical*, serifs dominate across headlines and longform reflections to heighten the tactile diary feel.\n  - In *Soft Atmospheric*, `Manrope` expands slightly into titles (`headline-sm` shifts to `Manrope Medium`) for a clean, weightless presence suspended over ambient backdrops.\n  - In *Minimal Zen*, tracking increases by `0.02em` across all labels, and body text tightens to crisp, structured measures (maximum 58 characters per line) to maintain spatial tranquility.\n\n## Layout & Spacing\n\nThe layout philosophy follows an **unhurried fluid container model** designed to shield users from claustrophobic density and visually overwhelming dashboards.\n\n### Grid and Spatial Cadence\n- **Mobile (< 640px)**: Single dynamic column. Outer canvas margin is `1.25rem` (`20px`). Content width never exceeds safe, single-thumb interactive zones.\n- **Tablet (640px \u2013 1024px)**: 6-column fluid structure. Outer margin expands to `2.5rem` (`40px`), with a `1.5rem` gutter. Mood logs and somatic body maps sit side-by-side.\n- **Desktop (> 1024px)**: 12-column grid capped at a centered maximum width of `1120px` to maintain focused visual calmness. Outer margins float dynamically up to `4rem`.\n\n### Structural Rhythm\n- Vertical rhythm strictly adheres to multiples of `8px` (`0.5rem`).\n- Breathing rooms (`space-xl` and `space-2xl`) separate introspection sections, preventing the interface from pressuring the user toward rapid sequential input.\n- Touch targets strictly maintain a minimum height and width of `48px`, surrounded by `space-sm` boundary buffers to accommodate motor variation during emotional dysregulation.\n\n## Elevation & Depth\n\nVisual depth avoids sharp artificial drop-shadows and clinical black overlays. Hierarchy is achieved organically tailored to each visual mode:\n\n### 1. Warm Botanical & Tactile Journal: Paper Stacking & Fiber Depth\n- **Level 0 (Canvas)**: Baseline unbleached linen texture (`#F9F6F0`).\n- **Level 1 (Card Deck)**: Pale vellum surface (`#FFFFFF` tinted with `#F4EFE6`) with a dual tactile shadow:\n  `0 2px 4px rgba(56, 46, 43, 0.03), 0 8px 24px rgba(126, 88, 70, 0.06)`.\n- **Level 2 (Floating Drawer / Active Dialogue)**: Lifted parchment with soft, directional amber-tinged ambient occlusion:\n  `0 12px 32px rgba(56, 46, 43, 0.08), 0 2px 6px rgba(56, 46, 43, 0.04)`.\n- **Borders**: 1px raw fiber tint (`rgba(100, 80, 70, 0.08)`), replicating unpressed paper edges.\n\n### 2. Soft Atmospheric Gradient: Frosted Luminosity & Diffused Halos\n- **Level 0 (Canvas)**: Multi-stop organic mesh gradient: dusk indigo (`#2A2E43`), deep violet (`#1E2130`), and soft peach flares (`#F7B297`).\n- **Level 1 (Atmospheric Vessel)**: Translucent glass substrate (`rgba(255, 255, 255, 0.07)`) with backdrop blur (`backdrop-filter: blur(28px) saturate(140%)`).\n- **Level 2 (Elevated Focus)**: Luminous glow: `0 0 32px rgba(247, 178, 151, 0.18)`, bounded by a top-lit 1px perimeter (`linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 100%)`).\n\n### 3. Minimal Zen (Nordic Earth): Tonal Inset & Architectural Plane\n- **Level 0 (Canvas)**: Flat warm sand (`#F5F2EC`).\n- **Level 1 (Inset Tray)**: Sunken or parallel tone planes (`#EDE8E0`) devoid of drop shadows. Depth is communicated solely through 1px muted bone boundaries (`#E0D9CD`).\n- **Level 2 (Active Focus)**: Crisp 1.5px architectural outline using muted olive (`#5E6953`) with clean interior breathing space.\n\n## Shapes\n\nThe shape architecture centers on organic roundness (`roundedness: 2`), reflecting non-threatening, welcoming contours found in river stones, hand-cut card stock, and smoothed ceramic vessels.\n\n- **Base Radii (`rounded` / 0.5rem)**: Micro-elements, mood tags, subtle status badges, and internal input elements.\n- **Medium Radii (`rounded-lg` / 1.0rem)**: Core journaling cards, somatic visualizer bounds, and mood spectrum selectors.\n- **Large Radii (`rounded-xl` / 1.5rem)**: Primary surface containers, bottom sheets, persistent audio players for ambient soundscapes, and modal sheets.\n- **Full Pill (`9999px`)**: Interactive CTA buttons, audio scrubbers, and somatic breathing guides to maintain organic fluidity.\n- **Corner Curvature (Squircle / Continuous Curvature)**: All cards leverage continuous curvature smoothing (`corner-smoothing: 60%` where CSS Houdini/native platforms allow) to eliminate visual tension at arc transitions.\n\n## Components\n\n### 1. Buttons & Interaction Triggers\n- **Primary Button**: Pill-shaped (`rounded-full`), height `52px`. In *Botanical*, filled with Terracotta (`#D97757`) with warm cream typography. In *Atmospheric*, dawn peach-to-amber subtle gradient with soft dusk indigo text. In *Minimal Zen*, solid charcoal ink (`#232323`) with sand typography. Micro-interactions utilize soft scale reduction (`0.98`) upon press with dampening physics.\n- **Secondary / Ghost Button**: Pill-shaped with a 1px border matching the theme's structural border token. Transparent fill, adopting a 4% surface wash on hover.\n\n### 2. Emotion Selection Chips (The Mood Lexicon)\n- Soft rounded (`rounded-lg`), min-height `38px`, padding `8px 16px`.\n- Unselected state uses neutral tonal surfaces with subtle text.\n- Selected state smoothly transitions background to the associated emotion colorway (e.g., Sage for Tranquility, Terracotta for Passion/Anger, Mist Blue for Melancholy) with a subtle scale pulse and an organic border transition.\n\n### 3. Somatic Cards & Journal Prompts\n- Cards feature generous internal padding (`space-lg` / `24px`).\n- In *Botanical*, cards sport an organic paper tone with light texturing and soft warm drop shadow.\n- In *Atmospheric*, cards feature frosted glass blur with luminous top rim lighting.\n- In *Minimal Zen*, cards are flat, bone-tinted panels framed by an understated hairline border.\n\n### 4. Continuous Valence & Intensity Sliders (Somatic Wheel / Track)\n- Thumbs are oversized (`32px` touch target) circular pebbles with a gentle internal gradient.\n- Track height is `8px` with fully rounded endpoints. The track fills with a dynamic multi-hue chromatic continuum indicating emotional intensity, accompanied by gentle haptic ticks at threshold intervals.\n\n### 5. Checkboxes & Radio Toggles\n- Custom organic rounded squares (`6px` radius) for multi-select somatic tags; circles for single-state answers.\n- State checks replace hard checkmarks with hand-drawn, soft-tapered vector glyphs.\n\n### 6. Journal Input Fields (Reflective Canvas)\n- Free-form text inputs do not look like traditional form fields; they present as lined or unlined writing spaces with zero harsh boundaries.\n- Placeholder text renders in `Newsreader Italic`, inviting emotional expression rather than administrative data entry.\n- Focused state gently highlights the lower baseline or card container with a warm, soft hue without glowing harsh focus rings.",
+    "font": "LITERATA",
+    "headlineFont": "LITERATA",
+    "headlineFontFamily": "Literata",
+    "labelFont": "MANROPE",
+    "labelFontFamily": "Manrope",
+    "namedColors": {
+      "background": "#fcf9f3",
+      "error": "#ba1a1a",
+      "error_container": "#ffdad6",
+      "inverse_on_surface": "#f3f0ea",
+      "inverse_primary": "#ffb59e",
+      "inverse_surface": "#31312d",
+      "on_background": "#1c1c18",
+      "on_error": "#ffffff",
+      "on_error_container": "#93000a",
+      "on_primary": "#ffffff",
+      "on_primary_container": "#541400",
+      "on_primary_fixed": "#390b00",
+      "on_primary_fixed_variant": "#7a2f15",
+      "on_secondary": "#ffffff",
+      "on_secondary_container": "#506a58",
+      "on_secondary_fixed": "#062012",
+      "on_secondary_fixed_variant": "#334c3b",
+      "on_surface": "#1c1c18",
+      "on_surface_variant": "#55433d",
+      "on_tertiary": "#ffffff",
+      "on_tertiary_container": "#3f2500",
+      "on_tertiary_fixed": "#2b1700",
+      "on_tertiary_fixed_variant": "#604018",
+      "outline": "#88726c",
+      "outline_variant": "#dbc1b9",
+      "primary": "#99462a",
+      "primary_container": "#d97757",
+      "primary_fixed": "#ffdbd0",
+      "primary_fixed_dim": "#ffb59e",
+      "secondary": "#4a6452",
+      "secondary_container": "#ccead2",
+      "secondary_fixed": "#ccead2",
+      "secondary_fixed_dim": "#b0ceb7",
+      "surface": "#fcf9f3",
+      "surface_bright": "#fcf9f3",
+      "surface_container": "#f0eee8",
+      "surface_container_high": "#ebe8e2",
+      "surface_container_highest": "#e5e2dc",
+      "surface_container_low": "#f6f3ed",
+      "surface_container_lowest": "#ffffff",
+      "surface_dim": "#dcdad4",
+      "surface_tint": "#99462a",
+      "surface_variant": "#e5e2dc",
+      "tertiary": "#7a572d",
+      "tertiary_container": "#b38a5b",
+      "tertiary_fixed": "#ffddb9",
+      "tertiary_fixed_dim": "#edbe8b"
+    },
+    "overrideNeutralColor": "#f9f6f0",
+    "overridePrimaryColor": "#d97757",
+    "overrideSecondaryColor": "#7e9a85",
+    "overrideTertiaryColor": "#e8ba87",
+    "roundness": "ROUND_EIGHT",
+    "spacing": {
+      "gutter": "1rem",
+      "gutter-desktop": "2rem",
+      "gutter-tablet": "1.5rem",
+      "margin": "1.25rem",
+      "margin-desktop": "4rem",
+      "margin-tablet": "2.5rem",
+      "space-2xl": "4rem",
+      "space-lg": "1.5rem",
+      "space-md": "1rem",
+      "space-sm": "0.5rem",
+      "space-xl": "2.5rem",
+      "space-xs": "0.25rem"
+    },
+    "spacingScale": 2,
+    "typography": {
+      "body-lg": {
+        "fontFamily": "Newsreader",
+        "fontSize": "18px",
+        "fontWeight": "400",
+        "lineHeight": "28px"
+      },
+      "body-md": {
+        "fontFamily": "Newsreader",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      },
+      "body-sm": {
+        "fontFamily": "Newsreader",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "20px"
+      },
+      "display-lg": {
+        "fontFamily": "Literata",
+        "fontSize": "48px",
+        "fontWeight": "400",
+        "letterSpacing": "-0.02em",
+        "lineHeight": "56px"
+      },
+      "display-lg-mobile": {
+        "fontFamily": "Literata",
+        "fontSize": "34px",
+        "fontWeight": "400",
+        "letterSpacing": "-0.01em",
+        "lineHeight": "42px"
+      },
+      "headline-lg": {
+        "fontFamily": "Literata",
+        "fontSize": "32px",
+        "fontWeight": "400",
+        "letterSpacing": "-0.01em",
+        "lineHeight": "40px"
+      },
+      "headline-lg-mobile": {
+        "fontFamily": "Literata",
+        "fontSize": "26px",
+        "fontWeight": "400",
+        "lineHeight": "34px"
+      },
+      "headline-md": {
+        "fontFamily": "Literata",
+        "fontSize": "24px",
+        "fontWeight": "500",
+        "lineHeight": "32px"
+      },
+      "headline-sm": {
+        "fontFamily": "Literata",
+        "fontSize": "20px",
+        "fontWeight": "500",
+        "lineHeight": "28px"
+      },
+      "label-lg": {
+        "fontFamily": "Manrope",
+        "fontSize": "14px",
+        "fontWeight": "600",
+        "letterSpacing": "0.03em",
+        "lineHeight": "20px"
+      },
+      "label-md": {
+        "fontFamily": "Manrope",
+        "fontSize": "12px",
+        "fontWeight": "500",
+        "letterSpacing": "0.04em",
+        "lineHeight": "16px"
+      },
+      "label-sm": {
+        "fontFamily": "Manrope",
+        "fontSize": "11px",
+        "fontWeight": "500",
+        "letterSpacing": "0.05em",
+        "lineHeight": "14px"
+      },
+      "title-md": {
+        "fontFamily": "Newsreader",
+        "fontSize": "18px",
+        "fontWeight": "500",
+        "letterSpacing": "0.005em",
+        "lineHeight": "26px"
+      }
+    }
+  },
+  "deviceType": "MOBILE",
+  "metadata": {
+    "userRole": "OWNER"
+  },
+  "name": "projects/18285346366310744272",
+  "origin": "STITCH",
+  "projectType": "TEXT_TO_UI_PRO",
+  "screenInstances": [
+    {
+      "height": 843,
+      "id": "01e8a8a4c9db4df29d4fdf6d9ea099bb",
+      "sourceScreen": "projects/18285346366310744272/screens/01e8a8a4c9db4df29d4fdf6d9ea099bb",
+      "width": 390,
+      "x": 908,
+      "y": 11777
+    },
+    {
+      "height": 532,
+      "id": "05395bc76dac4ac69ce8fdcb89dc62f6",
+      "sourceScreen": "projects/18285346366310744272/screens/05395bc76dac4ac69ce8fdcb89dc62f6",
+      "width": 390,
+      "x": 454,
+      "y": 13132
+    },
+    {
+      "height": 884,
+      "id": "11882805a8ca40089192f4f84979e83b",
+      "sourceScreen": "projects/18285346366310744272/screens/11882805a8ca40089192f4f84979e83b",
+      "width": 390,
+      "x": 7602,
+      "y": 24782
+    },
+    {
+      "height": 1636,
+      "id": "11e73840f4ce4906b7524a9358bbb586",
+      "sourceScreen": "projects/18285346366310744272/screens/11e73840f4ce4906b7524a9358bbb586",
+      "width": 390,
+      "x": 454,
+      "y": 1970
+    },
+    {
+      "height": 884,
+      "id": "135b3f3f798e4b49b5d367f0da75f2c6",
+      "sourceScreen": "projects/18285346366310744272/screens/135b3f3f798e4b49b5d367f0da75f2c6",
+      "width": 390,
+      "x": 454,
+      "y": 21103
+    },
+    {
+      "height": 868,
+      "id": "2618893cedd546c6a29e2279d2cca2a8",
+      "sourceScreen": "projects/18285346366310744272/screens/2618893cedd546c6a29e2279d2cca2a8",
+      "width": 390,
+      "x": 3541,
+      "y": 24733
+    },
+    {
+      "height": 884,
+      "id": "2f0a231588df435f9c402cd04b4d01f8",
+      "sourceScreen": "projects/18285346366310744272/screens/2f0a231588df435f9c402cd04b4d01f8",
+      "width": 390,
+      "x": 454,
+      "y": 24136
+    },
+    {
+      "height": 980,
+      "id": "362d03816dc0434a973662f693dd8386",
+      "sourceScreen": "projects/18285346366310744272/screens/362d03816dc0434a973662f693dd8386",
+      "width": 390,
+      "y": 10214
+    },
+    {
+      "height": 721,
+      "id": "38cb71b30a5e489e9bf7674b63416e53",
+      "sourceScreen": "projects/18285346366310744272/screens/38cb71b30a5e489e9bf7674b63416e53",
+      "width": 390,
+      "x": 7148,
+      "y": 24782
+    },
+    {
+      "height": 1278,
+      "id": "51f5ab21781e4ba5a1f4d811e21f85f9",
+      "sourceScreen": "projects/18285346366310744272/screens/51f5ab21781e4ba5a1f4d811e21f85f9",
+      "width": 390,
+      "x": 454,
+      "y": 6973
+    },
+    {
+      "height": 732,
+      "id": "573655f0b6f1488e923aeec472427b80",
+      "sourceScreen": "projects/18285346366310744272/screens/573655f0b6f1488e923aeec472427b80",
+      "width": 390,
+      "y": 13132
+    },
+    {
+      "height": 1176,
+      "id": "58cf9fac7b1d49febf16059d21c89b60",
+      "sourceScreen": "projects/18285346366310744272/screens/58cf9fac7b1d49febf16059d21c89b60",
+      "width": 390,
+      "x": 908,
+      "y": 22243
+    },
+    {
+      "height": 884,
+      "id": "6648ebc1bb184fe682ab5b6f264758df",
+      "sourceScreen": "projects/18285346366310744272/screens/6648ebc1bb184fe682ab5b6f264758df",
+      "width": 390,
+      "x": 6240,
+      "y": 24782
+    },
+    {
+      "height": 1450,
+      "id": "68d97ed55f7f464fa76067ed856d85f0",
+      "sourceScreen": "projects/18285346366310744272/screens/68d97ed55f7f464fa76067ed856d85f0",
+      "width": 390,
+      "x": 908,
+      "y": 8507
+    },
+    {
+      "height": 1203,
+      "id": "693457b799bf4aa6b73be8f7c611a1ca",
+      "sourceScreen": "projects/18285346366310744272/screens/693457b799bf4aa6b73be8f7c611a1ca",
+      "width": 390,
+      "y": 6973
+    },
+    {
+      "height": 1194,
+      "id": "6e27204eccac4f1385485f66b4f72367",
+      "sourceScreen": "projects/18285346366310744272/screens/6e27204eccac4f1385485f66b4f72367",
+      "width": 390,
+      "y": 5519
+    },
+    {
+      "height": 744,
+      "id": "6ee881192ef14401b3b043a601203ff0",
+      "sourceScreen": "projects/18285346366310744272/screens/6ee881192ef14401b3b043a601203ff0",
+      "width": 390,
+      "x": 908,
+      "y": 13132
+    },
+    {
+      "height": 1547,
+      "id": "72074dfd241844fa8f65822673485b7e",
+      "sourceScreen": "projects/18285346366310744272/screens/72074dfd241844fa8f65822673485b7e",
+      "width": 390,
+      "x": 1478
+    },
+    {
+      "height": 1169,
+      "id": "73cf853f286a428a9c773d5cb608ce02",
+      "sourceScreen": "projects/18285346366310744272/screens/73cf853f286a428a9c773d5cb608ce02",
+      "width": 390,
+      "x": 908,
+      "y": 3862
+    },
+    {
+      "height": 1161,
+      "id": "7515420dd97f4f0fbeb85c25b533545e",
+      "sourceScreen": "projects/18285346366310744272/screens/7515420dd97f4f0fbeb85c25b533545e",
+      "width": 390,
+      "x": 908,
+      "y": 5519
+    },
+    {
+      "height": 174,
+      "id": "7f4528da-e7b6-4bfe-8c7b-936e2b71e1f1",
+      "sourceScreen": "projects/18285346366310744272/screens/4358480729083619299",
+      "type": "SCREEN_INSTANCE",
+      "width": 512,
+      "x": 907,
+      "y": 15020
+    },
+    {
+      "height": 231,
+      "id": "82d9b95e-1143-4180-81b7-b687ffb98f98",
+      "sourceScreen": "projects/18285346366310744272/screens/5932942222893492645",
+      "type": "SCREEN_INSTANCE",
+      "width": 512,
+      "x": 1603,
+      "y": 14751
+    },
+    {
+      "height": 1618,
+      "id": "82ee9107ddac46118a01f9c5d2965405",
+      "sourceScreen": "projects/18285346366310744272/screens/82ee9107ddac46118a01f9c5d2965405",
+      "width": 390,
+      "x": 908,
+      "y": 1970
+    },
+    {
+      "height": 1170,
+      "id": "8662c5d577b04fa78a3c5670147bdeec",
+      "sourceScreen": "projects/18285346366310744272/screens/8662c5d577b04fa78a3c5670147bdeec",
+      "width": 390,
+      "y": 22243
+    },
+    {
+      "height": 823,
+      "id": "8f1baff21d3b4191ba2943b8e8cfe5f8",
+      "sourceScreen": "projects/18285346366310744272/screens/8f1baff21d3b4191ba2943b8e8cfe5f8",
+      "width": 390,
+      "y": 11777
+    },
+    {
+      "height": 1034,
+      "id": "8fb94ade03d744beba1f4e545b7a4d0e",
+      "sourceScreen": "projects/18285346366310744272/screens/8fb94ade03d744beba1f4e545b7a4d0e",
+      "width": 390,
+      "y": 24136
+    },
+    {
+      "height": 1343,
+      "id": "925c50df34a94f719c6e958a3d79b6c4",
+      "sourceScreen": "projects/18285346366310744272/screens/925c50df34a94f719c6e958a3d79b6c4",
+      "width": 390,
+      "x": 454,
+      "y": 8507
+    },
+    {
+      "height": 884,
+      "id": "94784fd0b30643709da5d150c1335b5f",
+      "sourceScreen": "projects/18285346366310744272/screens/94784fd0b30643709da5d150c1335b5f",
+      "width": 390,
+      "x": 2915,
+      "y": 24743
+    },
+    {
+      "height": 884,
+      "id": "9997ae910dc543a59123101cbda292c8",
+      "sourceScreen": "projects/18285346366310744272/screens/9997ae910dc543a59123101cbda292c8",
+      "width": 390,
+      "x": 8056,
+      "y": 24782
+    },
+    {
+      "height": 170,
+      "id": "9b48f9d1-d6ab-4713-b254-c04e389f2dd9",
+      "sourceScreen": "projects/18285346366310744272/screens/3418279744999894395",
+      "type": "SCREEN_INSTANCE",
+      "width": 512,
+      "x": 1099,
+      "y": 14568
+    },
+    {
+      "height": 1177,
+      "id": "9e8ec95b49e84a90845f6e1f822bca8d",
+      "sourceScreen": "projects/18285346366310744272/screens/9e8ec95b49e84a90845f6e1f822bca8d",
+      "width": 390,
+      "x": 908,
+      "y": 10214
+    },
+    {
+      "height": 850,
+      "id": "a110201c22f443c2a9c068be1155af0e",
+      "sourceScreen": "projects/18285346366310744272/screens/a110201c22f443c2a9c068be1155af0e",
+      "width": 390,
+      "y": 19997
+    },
+    {
+      "height": 174,
+      "id": "a5f67e94-d796-4e01-8901-53e3817c26a5",
+      "sourceScreen": "projects/18285346366310744272/screens/11430843000859351462",
+      "type": "SCREEN_INSTANCE",
+      "width": 512,
+      "x": 907,
+      "y": 14813
+    },
+    {
+      "height": 868,
+      "id": "a71879cb11014a8899be8ef56fd4b4e9",
+      "sourceScreen": "projects/18285346366310744272/screens/a71879cb11014a8899be8ef56fd4b4e9",
+      "width": 390,
+      "y": 17749
+    },
+    {
+      "height": 884,
+      "id": "a9d23a48512a4781a31ad39068ce085a",
+      "sourceScreen": "projects/18285346366310744272/screens/a9d23a48512a4781a31ad39068ce085a",
+      "width": 390,
+      "x": 1547,
+      "y": 24801
+    },
+    {
+      "height": 992,
+      "id": "ae1ed7a2dcc04b269d06ca532d1fbb4c",
+      "sourceScreen": "projects/18285346366310744272/screens/ae1ed7a2dcc04b269d06ca532d1fbb4c",
+      "width": 390,
+      "x": 8510,
+      "y": 24782
+    },
+    {
+      "height": 1137,
+      "id": "affecafdbf7f4c499dd34083bab32ec8",
+      "sourceScreen": "projects/18285346366310744272/screens/affecafdbf7f4c499dd34083bab32ec8",
+      "width": 390,
+      "x": 1362,
+      "y": 11777
+    },
+    {
+      "height": 540,
+      "id": "assets_09a8a6af874b49e8b263d6aeed8c118c",
+      "sourceAsset": "assets/09a8a6af874b49e8b263d6aeed8c118c",
+      "type": "DESIGN_SYSTEM_INSTANCE",
+      "width": 960
+    },
+    {
+      "height": 540,
+      "id": "assets_b8762a17ec2f40eeb4d90d70b687d9bb",
+      "sourceAsset": "assets/b8762a17ec2f40eeb4d90d70b687d9bb",
+      "type": "DESIGN_SYSTEM_INSTANCE",
+      "width": 960,
+      "x": 5216,
+      "y": 24782
+    },
+    {
+      "height": 540,
+      "id": "assets_e299e277592a42679b37b0a351274f9e",
+      "sourceAsset": "assets/e299e277592a42679b37b0a351274f9e",
+      "type": "DESIGN_SYSTEM_INSTANCE",
+      "width": 960,
+      "y": 15450
+    },
+    {
+      "height": 1714,
+      "id": "b9e954fbdca444c59f6626961f49225d",
+      "sourceScreen": "projects/18285346366310744272/screens/b9e954fbdca444c59f6626961f49225d",
+      "width": 390,
+      "x": 1932
+    },
+    {
+      "height": 917,
+      "id": "ba41df51fef24abbae688d7b5e21f9f0",
+      "sourceScreen": "projects/18285346366310744272/screens/ba41df51fef24abbae688d7b5e21f9f0",
+      "width": 390,
+      "x": 454,
+      "y": 11777
+    },
+    {
+      "height": 884,
+      "id": "ba7339002dea400eac9ff174a0e5b4ed",
+      "sourceScreen": "projects/18285346366310744272/screens/ba7339002dea400eac9ff174a0e5b4ed",
+      "width": 390,
+      "x": 908,
+      "y": 26542
+    },
+    {
+      "height": 884,
+      "id": "bbc6f7d726d74e84b6d9dc00f1e2451f",
+      "sourceScreen": "projects/18285346366310744272/screens/bbc6f7d726d74e84b6d9dc00f1e2451f",
+      "width": 390,
+      "x": 4762,
+      "y": 24782
+    },
+    {
+      "height": 1544,
+      "id": "c2165c0e74d64cddaeac4bdfee4e9480",
+      "sourceScreen": "projects/18285346366310744272/screens/c2165c0e74d64cddaeac4bdfee4e9480",
+      "width": 390,
+      "x": 1024
+    },
+    {
+      "height": 1197,
+      "id": "c78c5a1c72524915bd8eace5dd220c0c",
+      "sourceScreen": "projects/18285346366310744272/screens/c78c5a1c72524915bd8eace5dd220c0c",
+      "width": 390,
+      "x": 454,
+      "y": 5519
+    },
+    {
+      "height": 1637,
+      "id": "d20d6b4ba7fd4d7cb2a0210deba93aa4",
+      "sourceScreen": "projects/18285346366310744272/screens/d20d6b4ba7fd4d7cb2a0210deba93aa4",
+      "width": 390,
+      "x": 454,
+      "y": 22243
+    },
+    {
+      "height": 1256,
+      "id": "d2f3a214d8584e3c8a54dd1b2a8565ba",
+      "sourceScreen": "projects/18285346366310744272/screens/d2f3a214d8584e3c8a54dd1b2a8565ba",
+      "width": 390,
+      "x": 454,
+      "y": 3862
+    },
+    {
+      "height": 902,
+      "id": "d77426038b3c483e95781d7f968c58ed",
+      "sourceScreen": "projects/18285346366310744272/screens/d77426038b3c483e95781d7f968c58ed",
+      "width": 390,
+      "x": 1024,
+      "y": 15450
+    },
+    {
+      "height": 632,
+      "id": "d8543e1226f04631b7828aaf1630a61d",
+      "sourceScreen": "projects/18285346366310744272/screens/d8543e1226f04631b7828aaf1630a61d",
+      "width": 390,
+      "x": 4075,
+      "y": 24781
+    },
+    {
+      "height": 1234,
+      "id": "d97d3882a4f348a09c9b626e513be2f4",
+      "sourceScreen": "projects/18285346366310744272/screens/d97d3882a4f348a09c9b626e513be2f4",
+      "width": 390,
+      "y": 8507
+    },
+    {
+      "height": 860,
+      "hidden": true,
+      "id": "dd8c3cacff934dc983a1eef1a172a2ba",
+      "sourceScreen": "projects/18285346366310744272/screens/dd8c3cacff934dc983a1eef1a172a2ba",
+      "width": 1280,
+      "y": 25426
+    },
+    {
+      "height": 1307,
+      "id": "e12df0dbf30441afb9c1bbdc25ad85fa",
+      "sourceScreen": "projects/18285346366310744272/screens/e12df0dbf30441afb9c1bbdc25ad85fa",
+      "width": 390,
+      "x": 454,
+      "y": 10214
+    },
+    {
+      "height": 1142,
+      "id": "e9e88a0ff45f4e1f8fb7f38518c391eb",
+      "sourceScreen": "projects/18285346366310744272/screens/e9e88a0ff45f4e1f8fb7f38518c391eb",
+      "width": 390,
+      "x": 2140,
+      "y": 24808
+    },
+    {
+      "height": 868,
+      "id": "ea0b4935c9fe47988f4eb62c48100bf3",
+      "sourceScreen": "projects/18285346366310744272/screens/ea0b4935c9fe47988f4eb62c48100bf3",
+      "width": 390,
+      "x": 6694,
+      "y": 24782
+    },
+    {
+      "height": 1515,
+      "id": "fa4e39916afc49429da76b2fea90d80a",
+      "sourceScreen": "projects/18285346366310744272/screens/fa4e39916afc49429da76b2fea90d80a",
+      "width": 390,
+      "y": 1970
+    },
+    {
+      "height": 1401,
+      "id": "fbc2e3c013b449b8a83943d3bec3ff10",
+      "sourceScreen": "projects/18285346366310744272/screens/fbc2e3c013b449b8a83943d3bec3ff10",
+      "width": 390,
+      "y": 3862
+    }
+  ],
+  "thumbnailScreenshot": {
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1VqL3lF51Zy98-FXUjUIVXo9v2vuGJDkhiLHjK4FMqwbY4w06pKBJrgwBYYSpb-AilwbaKMk5jh0pvCStwO8uaW5CaFAeKqZ9kXl4AC7vsbuWud_eWzWsjVC5JokhEnXqzwQC2mcKJrj7Ll9HhcSRxsrXcxR3qHN_ZyIAet3JyP7_8P1SteN-cEN_lHS9aJJm2RsHuqEmarCSvF-Ow_myl-FWtfWadiauDiSBUMvXsez_oMestjJUqqFso",
+    "name": "projects/18285346366310744272/screens/c2165c0e74d64cddaeac4bdfee4e9480/fileEntries/screenshot"
+  },
+  "title": "Mindful Emotion Tracker",
+  "updateTime": "2026-09-17T17:56:16.133678Z",
+  "visibility": "PRIVATE"
+}

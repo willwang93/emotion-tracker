@@ -8,8 +8,10 @@ import {
   PanResponder,
   Dimensions,
 } from 'react-native';
-import { CheckIn } from '../types';
+import { MaterialIcons } from '@expo/vector-icons';
+import { CheckIn, QuadrantType } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
+import { fonts } from '../theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = -85;
@@ -20,14 +22,71 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
+function getQuadrantBadgeIcon(quadrant: QuadrantType, color: string) {
+  switch (quadrant) {
+    case 'green':
+      return <MaterialIcons name="spa" size={16} color={color} />;
+    case 'yellow':
+      return <MaterialIcons name="wb-sunny" size={16} color={color} />;
+    case 'red':
+      return <MaterialIcons name="air" size={16} color={color} />;
+    case 'blue':
+      return <MaterialIcons name="bedtime" size={16} color={color} />;
+    default:
+      return <MaterialIcons name="spa" size={16} color={color} />;
+  }
+}
+
+function getChipIcon(name: string, color: string) {
+  const lower = name.toLowerCase();
+  if (lower.includes('home')) {
+    return <MaterialIcons name="cottage" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('work') || lower.includes('studio') || lower.includes('office')) {
+    return <MaterialIcons name="domain" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('school') || lower.includes('class')) {
+    return <MaterialIcons name="apartment" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('transit') || lower.includes('commute')) {
+    return <MaterialIcons name="commute" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('outdoor')) {
+    return <MaterialIcons name="nature-people" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('gym') || lower.includes('exercise')) {
+    return <MaterialIcons name="fitness-center" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('cafe') || lower.includes('restaurant')) {
+    return <MaterialIcons name="local-cafe" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('alone')) {
+    return <MaterialIcons name="self-improvement" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('friend')) {
+    return <MaterialIcons name="group" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('coworker') || lower.includes('colleague')) {
+    return <MaterialIcons name="badge" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('client')) {
+    return <MaterialIcons name="support-agent" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('family')) {
+    return <MaterialIcons name="favorite" size={13} color={color} style={styles.chipIcon} />;
+  }
+  if (lower.includes('partner') || lower.includes('wife')) {
+    return <MaterialIcons name="favorite-border" size={13} color={color} style={styles.chipIcon} />;
+  }
+  return <MaterialIcons name="label-outline" size={13} color={color} style={styles.chipIcon} />;
+}
+
 export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => {
   const { theme, isDark } = useAppTheme();
-  const qMeta = theme.quadrants[checkIn.quadrant] || theme.quadrants.red;
+  const qMeta = theme.quadrants[checkIn.quadrant] || theme.quadrants.green;
 
   const dateObj = new Date(checkIn.timestamp);
-  const timeFormatted = dateObj
-    .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    .toUpperCase();
+  const timeFormatted = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   const translateX = useRef(new Animated.Value(0)).current;
   const isSwiping = useRef(false);
@@ -91,17 +150,17 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
     extrapolate: 'clamp',
   });
 
-  // Construct location & company kicker
-  // e.g. "09:15 AM · AT THE OFFICE DESK WITH WIFE"
-  const locationPart = checkIn.contextWhere ? `AT THE ${checkIn.contextWhere.toUpperCase()}` : '';
-  const whoPart = checkIn.contextWho && checkIn.contextWho.length > 0
-    ? (checkIn.contextWho.includes('Alone') ? 'ALONE' : `WITH ${checkIn.contextWho.join(', ').toUpperCase()}`)
-    : '';
-
-  const allChips = [
-    ...(checkIn.somaticSensations || []),
-    ...(checkIn.contextWhat || (checkIn.contextWhere ? [checkIn.contextWhere] : [])),
+  // Collect Context Place & People chips
+  const placeChips = [
+    ...(checkIn.contextWhat || []),
+    ...(checkIn.contextWhere && !(checkIn.contextWhat || []).includes(checkIn.contextWhere)
+      ? [checkIn.contextWhere]
+      : []),
   ];
+  const peopleChips = checkIn.contextWho || [];
+  const somaticChips = checkIn.somaticSensations || [];
+
+  const displayChips = [...placeChips, ...peopleChips, ...somaticChips];
 
   return (
     <View style={styles.swipeWrapper}>
@@ -123,35 +182,54 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
         {...panResponder.panHandlers}
       >
         <TouchableOpacity
-          activeOpacity={0.85}
+          activeOpacity={0.88}
           onPress={handleCardPress}
           style={styles.cardInner}
         >
-          {/* Top Row: Tabular Time & Quadrant Dot */}
+          {/* Top Row: Quadrant Icon Badge + Emotion Title + Time */}
           <View style={styles.cardTopRow}>
+            <View style={styles.badgeAndTitle}>
+              <View
+                style={[
+                  styles.quadrantBadge,
+                  {
+                    backgroundColor: qMeta.subtleBg,
+                  },
+                ]}
+              >
+                {getQuadrantBadgeIcon(checkIn.quadrant, qMeta.color)}
+              </View>
+              <Text style={[styles.emotionTitle, { color: theme.text }]}>
+                {checkIn.primaryEmotion}
+              </Text>
+            </View>
+
             <Text style={[styles.timeText, { color: theme.textMuted }]}>
               {timeFormatted}
             </Text>
-            <View style={[styles.quadrantDot, { backgroundColor: qMeta.color }]} />
           </View>
 
-          {/* Middle Section: Emotion & Note */}
-          <View style={styles.middleSection}>
-            <Text style={[styles.emotionTitle, { color: theme.text }]}>
-              {checkIn.primaryEmotion}
+          {/* Middle: Reflection note text */}
+          {Boolean(checkIn.triggerNote || checkIn.urgeNote) && (
+            <Text style={[styles.noteText, { color: theme.textSecondary }]} numberOfLines={3}>
+              {checkIn.triggerNote || checkIn.urgeNote}
             </Text>
-            {Boolean(checkIn.triggerNote || checkIn.urgeNote) && (
-              <Text style={[styles.noteText, { color: theme.textSecondary }]} numberOfLines={2}>
-                "{checkIn.triggerNote || checkIn.urgeNote}"
-              </Text>
-            )}
-          </View>
+          )}
 
-          {/* Bottom Row: Somatics & Locations */}
-          {allChips.length > 0 && (
+          {/* Bottom Row: Pill tags with icons */}
+          {displayChips.length > 0 && (
             <View style={styles.chipsRow}>
-              {allChips.map((chip, i) => (
-                <View key={i} style={[styles.cardChip, { backgroundColor: theme.chipBg }]}>
+              {displayChips.map((chip, i) => (
+                <View
+                  key={`chip-${i}`}
+                  style={[
+                    styles.cardChip,
+                    {
+                      backgroundColor: isDark ? theme.surfaceSecondary : '#F2EDE3',
+                    },
+                  ]}
+                >
+                  {getChipIcon(chip, theme.textSecondary)}
                   <Text style={[styles.cardChipText, { color: theme.textSecondary }]}>
                     {chip}
                   </Text>
@@ -167,7 +245,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
 
 const styles = StyleSheet.create({
   swipeWrapper: {
-    marginVertical: 5,
+    marginVertical: 6,
     position: 'relative',
     justifyContent: 'center',
   },
@@ -178,11 +256,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#DC2626',
-    borderRadius: 20,
+    borderRadius: 24,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingRight: 20,
+    paddingRight: 24,
   },
   deleteBackgroundText: {
     color: '#FFFFFF',
@@ -191,9 +269,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   card: {
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1,
-    overflow: 'hidden',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   cardInner: {
     paddingHorizontal: 20,
@@ -205,43 +284,51 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  timeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    fontVariant: ['tabular-nums'],
+  badgeAndTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  quadrantDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  middleSection: {
-    marginBottom: 10,
+  quadrantBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emotionTitle: {
-    fontFamily: 'serif',
-    fontSize: 20,
-    fontWeight: '400',
+    fontSize: 16,
+    fontFamily: fonts.bold,
+    letterSpacing: -0.2,
+  },
+  timeText: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
   },
   noteText: {
-    fontSize: 13,
-    fontStyle: 'italic',
-    lineHeight: 19,
-    marginTop: 4,
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    lineHeight: 22,
+    marginBottom: 12,
   },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    paddingTop: 4,
+    gap: 8,
+    paddingTop: 2,
   },
   cardChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 9999,
+  },
+  chipIcon: {
+    marginRight: 5,
   },
   cardChipText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontFamily: fonts.medium,
   },
 });

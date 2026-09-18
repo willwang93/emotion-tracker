@@ -23,8 +23,27 @@ if (!isUnsupportedExpoGoAndroid && Platform.OS !== 'web') {
   }
 }
 
+export const REMINDER_CHANNEL_ID = 'daily_reminders';
+
 export function isNotificationsSupported(): boolean {
   return NotificationsModule !== null && !isUnsupportedExpoGoAndroid && Platform.OS !== 'web';
+}
+
+export async function setupNotificationChannel(): Promise<void> {
+  if (!NotificationsModule || Platform.OS !== 'android') return;
+  try {
+    await NotificationsModule.setNotificationChannelAsync(REMINDER_CHANNEL_ID, {
+      name: 'Daily Emotion Check-In Reminders',
+      importance: NotificationsModule.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#F57C00',
+      sound: 'default',
+      enableVibrate: true,
+      showBadge: false,
+    });
+  } catch (err) {
+    console.warn('Failed to setup notification channel:', err);
+  }
 }
 
 export async function requestNotificationPermissions(): Promise<boolean> {
@@ -60,6 +79,10 @@ export async function scheduleReminders(setting: ReminderSetting): Promise<void>
       return;
     }
 
+    if (Platform.OS === 'android') {
+      await setupNotificationChannel();
+    }
+
     const reminderMessages = [
       { title: 'Morning Check-In', body: 'How are you starting your day? Take 20 seconds to notice your energy and mood.' },
       { title: 'Mid-Day Check-In', body: 'Pause for a breath. What sensations are present in your body right now?' },
@@ -81,12 +104,15 @@ export async function scheduleReminders(setting: ReminderSetting): Promise<void>
         content: {
           title: message.title,
           body: message.body,
-          sound: true,
+          sound: 'default',
+          color: '#F57C00',
+          priority: NotificationsModule.AndroidNotificationPriority.HIGH,
         },
         trigger: {
           type: NotificationsModule.SchedulableTriggerInputTypes.DAILY,
           hour,
           minute,
+          channelId: REMINDER_CHANNEL_ID,
         },
       });
     }
