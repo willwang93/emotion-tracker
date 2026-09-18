@@ -10,7 +10,6 @@ import {
   PanResponder,
   Dimensions,
   Easing,
-  Share,
   TouchableWithoutFeedback,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -20,7 +19,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { ReminderSetting } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
 import { fonts } from '../theme';
-import { exportAllDataAsJson } from '../services/db';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_DELETE_THRESHOLD = -85;
@@ -409,30 +407,6 @@ export const ReminderModal: React.FC<Props> = ({
     triggerToast('Reminder deleted');
   };
 
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExportData = async () => {
-    if (isExporting) return;
-    try {
-      setIsExporting(true);
-      const { jsonString, count } = await exportAllDataAsJson();
-      if (count === 0) {
-        triggerToast('No journal entries to export yet');
-        return;
-      }
-      await Share.share({
-        title: `emotion_tracker_backup_${new Date().toISOString().slice(0, 10)}.json`,
-        message: jsonString,
-      });
-      triggerToast(`Exported ${count} ${count === 1 ? 'entry' : 'entries'}`);
-    } catch (err) {
-      console.error('Failed to export data:', err);
-      triggerToast('Export cancelled or failed');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const sheetTranslateY = sheetAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [SCREEN_HEIGHT * 0.7, 0],
@@ -500,38 +474,38 @@ export const ReminderModal: React.FC<Props> = ({
           </View>
         )}
 
-        {/* Main Content: List or Empty State, followed by Backup Section */}
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {times.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <View
-                style={[
-                  styles.emptyIconCircle,
-                  { backgroundColor: theme.surfaceContainer },
-                ]}
-              >
-                <MaterialIcons
-                  name="notifications-none"
-                  size={32}
-                  color={theme.textMuted}
-                />
-              </View>
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No reminders yet</Text>
-              <TouchableOpacity
-                onPress={() => openSheet(null)}
-                style={[styles.emptyAddButton, { backgroundColor: theme.btnPrimaryBg }]}
-                activeOpacity={0.85}
-              >
-                <MaterialIcons name="add" size={20} color="#FFFFFF" style={styles.emptyAddButtonIcon} />
-                <Text style={styles.emptyAddButtonText}>Add reminder</Text>
-              </TouchableOpacity>
+        {/* Main Content: List or Empty State */}
+        {times.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View
+              style={[
+                styles.emptyIconCircle,
+                { backgroundColor: theme.surfaceContainer },
+              ]}
+            >
+              <MaterialIcons
+                name="notifications-none"
+                size={32}
+                color={theme.textMuted}
+              />
             </View>
-          ) : (
-            times.map((t, idx) => (
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>No reminders yet</Text>
+            <TouchableOpacity
+              onPress={() => openSheet(null)}
+              style={[styles.emptyAddButton, { backgroundColor: theme.btnPrimaryBg }]}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="add" size={20} color="#FFFFFF" style={styles.emptyAddButtonIcon} />
+              <Text style={styles.emptyAddButtonText}>Add reminder</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {times.map((t, idx) => (
               <SwipeableReminderCard
                 key={`${t}-${idx}`}
                 timeStr={t}
@@ -540,54 +514,9 @@ export const ReminderModal: React.FC<Props> = ({
                 theme={theme}
                 isDark={isDark}
               />
-            ))
-          )}
-
-          {/* Data & Backup Section */}
-          <View style={styles.backupSection}>
-            <Text style={[styles.backupSectionHeader, { color: theme.textMuted }]}>
-              DATA & BACKUP
-            </Text>
-            <View
-              style={[
-                styles.backupCard,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View style={styles.backupCardContent}>
-                <View
-                  style={[
-                    styles.backupIconCircle,
-                    { backgroundColor: theme.surfaceContainer },
-                  ]}
-                >
-                  <MaterialIcons name="file-download" size={22} color={theme.btnPrimaryBg} />
-                </View>
-                <View style={styles.backupTextContainer}>
-                  <Text style={[styles.backupTitle, { color: theme.text }]}>Export Journal Data</Text>
-                  <Text style={[styles.backupSubtitle, { color: theme.textSecondary }]}>
-                    Save all check-ins and settings as a JSON file to Google Drive, Files, or Notes.
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.backupExportButton, { backgroundColor: theme.btnPrimaryBg }]}
-                onPress={handleExportData}
-                activeOpacity={0.85}
-                disabled={isExporting}
-              >
-                <MaterialIcons name="share" size={18} color="#FFFFFF" style={styles.backupButtonIcon} />
-                <Text style={styles.backupExportButtonText}>
-                  {isExporting ? 'Exporting...' : 'Export JSON'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Bottom Sheet Time Picker Overlay */}
         {isSheetOpen && (
@@ -961,10 +890,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 36,
+    paddingHorizontal: 32,
+    paddingBottom: 60,
   },
   emptyIconCircle: {
     width: 64,
@@ -1003,68 +933,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 20,
-  },
-  backupSection: {
-    marginTop: 24,
-    paddingTop: 8,
-  },
-  backupSectionHeader: {
-    fontSize: 12,
-    fontFamily: fonts.bold,
-    letterSpacing: 1.2,
-    marginBottom: 10,
-    marginLeft: 4,
-  },
-  backupCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
-  },
-  backupCardContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 16,
-  },
-  backupIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backupTextContainer: {
-    flex: 1,
-  },
-  backupTitle: {
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    marginBottom: 4,
-  },
-  backupSubtitle: {
-    fontSize: 13,
-    fontFamily: fonts.regular,
-    lineHeight: 18,
-  },
-  backupExportButton: {
-    height: 44,
-    borderRadius: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F57C00',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  backupButtonIcon: {
-    marginRight: 6,
-  },
-  backupExportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: fonts.semiBold,
   },
   scrim: {
     backgroundColor: '#000000',
