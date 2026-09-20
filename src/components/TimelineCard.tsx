@@ -217,8 +217,22 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
           )}
 
           {/* Bottom Row: Pill tags with icons */}
-          {displayChips.length > 0 && (
+          {(Boolean(checkIn.intensity) || displayChips.length > 0) && (
             <View style={styles.chipsRow}>
+              {Boolean(checkIn.intensity) && (
+                <View
+                  style={[
+                    styles.cardChip,
+                    {
+                      backgroundColor: isDark ? theme.surfaceSecondary : '#F2EDE3',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.cardChipText, { color: theme.textSecondary }]}>
+                    {checkIn.intensity}
+                  </Text>
+                </View>
+              )}
               {displayChips.map((chip, i) => (
                 <View
                   key={`chip-${i}`}

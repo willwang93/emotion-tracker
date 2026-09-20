@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="en" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_stack" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;min-height:100vh;margin:0;padding:0;background-color:#fef9ee;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "secondary-fixed": "#dde1ff", "surface-container-lowest": "#ffffff", "tertiary-fixed": "#a5f4bc", "on-secondary": "#ffffff", "tertiary-container": "#61ad7b", "primary-fixed-dim": "#ffb786", "surface-container-low": "#f8f3e8", "secondary-container": "#3e66fb", "on-background": "#1d1c15", "surface-variant": "#e7e2d7", "on-primary-container": "#572800", "surface-container-high": "#ece8dd", "error": "#ba1a1a", "inverse-on-surface": "#f5f0e5", "surface": "#fef9ee", "surface-container-highest": "#e7e2d7", "on-tertiary": "#ffffff", "on-error-container": "#93000a", "surface-bright": "#fef9ee", "error-container": "#ffdad6", "outline": "#8b7263", "primary-container": "#f57c00", "background": "#fef9ee", "primary-fixed": "#ffdcc6", "outline-variant": "#dec1af", "on-surface": "#1d1c15", "surface-dim": "#dedacf", "on-secondary-fixed": "#001354", "inverse-primary": "#ffb786", "on-tertiary-container": "#003e20", "inverse-surface": "#323029", "on-secondary-fixed-variant": "#0036bb", "surface-tint": "#964900", "on-tertiary-fixed-variant": "#00522c", "on-primary-fixed-variant": "#723600", "on-surface-variant": "#574235", "tertiary": "#1b6c40", "primary": "#964900", "on-tertiary-fixed": "#00210e", "tertiary-fixed-dim": "#8ad7a1", "on-secondary-container": "#fffbff", "surface-container": "#f2ede3", "on-primary-fixed": "#311300", "secondary": "#194be2", "on-primary": "#ffffff", "secondary-fixed-dim": "#b8c4ff", "on-error": "#ffffff" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-lg": "2rem", "space-sm": "0.75rem", "gutter": "1rem", "margin": "2rem", "space-xs": "0.375rem", "space-xl": "3rem", "gutter-mobile": "0.75rem", "space-md": "1.25rem", "margin-mobile": "1.25rem" }, fontFamily: { "body-md": ["Plus Jakarta Sans"], "display-hero": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "headline-lg-mobile": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "display-hero-mobile": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"] }, fontSize: { "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "display-hero": ["44px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800" }], "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }], "label-lg": ["15px", { "lineHeight": "20px", "fontWeight": "700" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.015em", "fontWeight": "700" }], "display-hero-mobile": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "800" }], "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "700" }], "body-lg": ["18px", { "lineHeight": "26px", "fontWeight": "400" }], "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "600" }] } } } };</script></head><body class="bg-surface font-body-md text-on-surface min-h-screen flex flex-col antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><main class="flex flex-col flex-1 relative w-full pb-safe bg-surface px-margin-mobile justify-center"><div class="flex flex-col w-full pb-6">
+<div class="flex flex-col items-center text-center mt-2 mb-6">
+
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface tracking-tight max-w-[280px]">
+      How intense is this feeling?
+    </h2>
+
+</div>
+
+<div class="w-full flex flex-col gap-2 mt-2 mb-8">
+
+<div aria-label="Emotional intensity rating from 1 to 10" class="flex flex-wrap items-center justify-center gap-2.5 w-full select-none py-2" id="rating-track" role="radiogroup"><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="1" role="radio" type="button">1</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="2" role="radio" type="button">2</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="3" role="radio" type="button">3</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="4" role="radio" type="button">4</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="5" role="radio" type="button">5</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="6" role="radio" type="button">6</button><button aria-checked="true" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-[#a5f4bc] text-[#00210e] shadow-sm focus:outline-none font-bold" data-val="7" role="radio" type="button">7</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="8" role="radio" type="button">8</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="9" role="radio" type="button">9</button><button aria-checked="false" class="scale-btn min-w-[54px] px-4 py-2.5 flex items-center justify-center rounded-full font-label-lg text-label-lg transition-all duration-200 bg-white text-[#1f1a14] shadow-sm hover:bg-surface-container-low focus:outline-none" data-val="10" role="radio" type="button">10</button></div>
+</div>
+
+
+</div>
+<script>
+  (function() {
+    const descriptors = {
+      1: { label: 'Barely Felt', hint: 'Faint ripple, easily overlooked' },
+      2: { label: 'Subtle', hint: 'Present in the background' },
+      3: { label: 'Mild', hint: 'Gentle warmth or quiet stir' },
+      4: { label: 'Noticeable', hint: 'Clearly identifiable sensation' },
+      5: { label: 'Moderate', hint: 'Steady, grounded presence' },
+      6: { label: 'Pronounced', hint: 'Leaning forward into attention' },
+      7: { label: 'Strong', hint: 'Noticeable and commanding focus' },
+      8: { label: 'Intense', hint: 'Deeply felt across the body' },
+      9: { label: 'Surging', hint: 'Very loud, demanding space' },
+      10: { label: 'Overwhelming', hint: 'Peak crest, full awareness' }
+    };
+
+    const buttons = document.querySelectorAll('.scale-btn');
+    const numDisplay = document.getElementById('display-number');
+    const labelDisplay = document.getElementById('display-label');
+    const chipDisplay = document.getElementById('descriptor-chip');
+    const orbAmbient = document.getElementById('orb-ambient');
+    const orbCore = document.getElementById('orb-core');
+
+    let currentVal = 7;
+
+    function updateRating(val) {
+      currentVal = parseInt(val, 10);
+      const data = descriptors[currentVal];
+
+      buttons.forEach(btn => {
+        const btnVal = parseInt(btn.getAttribute('data-val'), 10);
+        const isSelected = btnVal === currentVal;
+        btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+
+        if (isSelected) {
+          btn.className = 'scale-btn h-11 flex items-center justify-center rounded-xl font-label-lg text-label-lg transition-all duration-200 bg-primary-container text-surface-container-lowest focus:outline-none';
+        } else {
+          btn.className = 'scale-btn h-11 flex items-center justify-center rounded-xl font-label-lg text-label-lg transition-all duration-200 bg-surface-container text-on-surface hover:bg-surface-container-high focus:outline-none';
+        }
+      });
+
+      if (numDisplay) {
+        numDisplay.textContent = currentVal;
+        numDisplay.style.transform = 'scale(1.15)';
+        setTimeout(() => {
+          numDisplay.style.transform = 'scale(1)';
+        }, 150);
+      }
+
+      if (labelDisplay) {
+        labelDisplay.textContent = data.label;
+      }
+
+      if (chipDisplay) {
+        chipDisplay.textContent = data.hint;
+      }
+
+      if (orbAmbient) {
+        const scaleFactor = 0.8 + (currentVal * 0.05);
+        const opacityVal = 0.35 + (currentVal * 0.05);
+        orbAmbient.style.transform = `scale(${scaleFactor})`;
+        orbAmbient.style.opacity = `${opacityVal}`;
+      }
+
+      if (orbCore) {
+        const coreScale = 0.95 + (currentVal * 0.015);
+        orbCore.style.transform = `scale(${coreScale})`;
+      }
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-val');
+        updateRating(val);
+      });
+    });
+
+    const cta = document.getElementById('continue-cta');
+    if (cta) {
+      cta.addEventListener('click', () => {
+        cta.style.transform = 'scale(0.98)';
+        setTimeout(() => {
+          cta.style.transform = 'scale(1)';
+        }, 120);
+      });
+    }
+
+    updateRating(7);
+  })();
+</script></main>
+
+</body></html>

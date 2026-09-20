@@ -18,6 +18,7 @@ import { CheckIn, QuadrantType } from '../types';
 import { EMOTIONS } from '../constants/moodMeter';
 import { useAppTheme } from '../theme/ThemeContext';
 import { fonts } from '../theme';
+import * as Haptics from 'expo-haptics';
 
 interface Props {
   visible: boolean;
@@ -125,9 +126,10 @@ export const MicroCheckInModal: React.FC<Props> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useAppTheme();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [quadrant, setQuadrant] = useState<QuadrantType | null>(null);
   const [primaryEmotion, setPrimaryEmotion] = useState<string | null>(null);
+  const [intensity, setIntensity] = useState<number>(7);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
   const [reflectionNote, setReflectionNote] = useState<string>('');
@@ -136,6 +138,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
     if (initialCheckIn) {
       setQuadrant(initialCheckIn.quadrant);
       setPrimaryEmotion(initialCheckIn.primaryEmotion);
+      setIntensity(initialCheckIn.intensity ?? 7);
       setSelectedPerson(initialCheckIn.contextWho?.[0] || null);
       setSelectedPlace(
         initialCheckIn.contextWhat?.[0] || initialCheckIn.contextWhere || null
@@ -164,6 +167,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
   const resetForm = () => {
     setQuadrant(null);
     setPrimaryEmotion(null);
+    setIntensity(7);
     setSelectedPerson(null);
     setSelectedPlace(null);
     setReflectionNote('');
@@ -171,8 +175,8 @@ export const MicroCheckInModal: React.FC<Props> = ({
 
   const nextStep = () => {
     if (!canProceed) return;
-    if (currentStep < 4) {
-      setCurrentStep((prev) => (prev + 1) as 1 | 2 | 3 | 4);
+    if (currentStep < 5) {
+      setCurrentStep((prev) => (prev + 1) as 1 | 2 | 3 | 4 | 5);
     } else {
       handleComplete();
     }
@@ -180,7 +184,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
 
   const prevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
+      setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4 | 5);
     } else {
       onClose();
     }
@@ -211,7 +215,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
       energyLevel: selectedQuad === 'yellow' || selectedQuad === 'red' ? 8 : 3,
       pleasantnessLevel: selectedQuad === 'yellow' || selectedQuad === 'green' ? 8 : 3,
       primaryEmotion: fallbackEmotion,
-      intensity: 7,
+      intensity: intensity || 7,
       somaticSensations: initialCheckIn?.somaticSensations || [],
       contextWho: selectedPerson ? [selectedPerson] : [],
       contextWhat: selectedPlace ? [selectedPlace] : [],
@@ -238,7 +242,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
       : true;
 
   const getNextBtnText = () => {
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       return 'Finish';
     }
     return 'Next';
@@ -448,8 +452,94 @@ export const MicroCheckInModal: React.FC<Props> = ({
                 </View>
               )}
 
-            {/* STEP 3: What's Contributing (Screen 5) */}
+            {/* STEP 3: Emotion Intensity */}
             {currentStep === 3 && (
+              <View style={styles.stepContainer}>
+                <Text style={[styles.mainQuestion, { color: theme.text }]}>
+                  How intense is this feeling?
+                </Text>
+
+                <View style={styles.intensityPillsContainer}>
+                  <View style={styles.intensityPillsRow}>
+                    {[1, 2, 3, 4, 5].map((num) => {
+                      const isSelected = intensity === num;
+                      return (
+                        <TouchableOpacity
+                          key={`int-${num}`}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            setIntensity(num);
+                            Haptics.selectionAsync().catch(() => {});
+                          }}
+                          style={[
+                            styles.intensityPillBtn,
+                            {
+                              backgroundColor: isSelected
+                                ? qTokens.selectedBg
+                                : isDark
+                                ? theme.surfaceSecondary
+                                : '#FFFFFF',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.intensityPillBtnText,
+                              {
+                                color: isSelected ? qTokens.selectedText : theme.text,
+                                fontFamily: isSelected ? fonts.bold : fonts.semiBold,
+                              },
+                            ]}
+                          >
+                            {num}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.intensityPillsRow}>
+                    {[6, 7, 8, 9, 10].map((num) => {
+                      const isSelected = intensity === num;
+                      return (
+                        <TouchableOpacity
+                          key={`int-${num}`}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            setIntensity(num);
+                            Haptics.selectionAsync().catch(() => {});
+                          }}
+                          style={[
+                            styles.intensityPillBtn,
+                            {
+                              backgroundColor: isSelected
+                                ? qTokens.selectedBg
+                                : isDark
+                                ? theme.surfaceSecondary
+                                : '#FFFFFF',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.intensityPillBtnText,
+                              {
+                                color: isSelected ? qTokens.selectedText : theme.text,
+                                fontFamily: isSelected ? fonts.bold : fonts.semiBold,
+                              },
+                            ]}
+                          >
+                            {num}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* STEP 4: What's Contributing (Screen 5) */}
+            {currentStep === 4 && (
               <View style={styles.stepContainer}>
                 <Text style={[styles.mainQuestion, { color: theme.text }]}>
                   What's contributing?
@@ -572,8 +662,8 @@ export const MicroCheckInModal: React.FC<Props> = ({
               </View>
             )}
 
-            {/* STEP 4: Reflection Note (Screen 6) */}
-            {currentStep === 4 && (
+            {/* STEP 5: Reflection Note (Screen 6) */}
+            {currentStep === 5 && (
               <View style={styles.stepContainer}>
                 <Text style={[styles.mainQuestion, { color: theme.text }]}>
                   What is causing this emotion?
@@ -845,5 +935,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.bold,
     letterSpacing: 0.2,
+  },
+  intensityPillsContainer: {
+    width: '100%',
+    gap: 12,
+    marginTop: 12,
+  },
+  intensityPillsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  intensityPillBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#BD8948',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  intensityPillBtnText: {
+    fontSize: 17,
+    fontFamily: fonts.semiBold,
   },
 });
