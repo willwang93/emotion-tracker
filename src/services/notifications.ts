@@ -25,10 +25,6 @@ if (!isUnsupportedExpoGoAndroid && Platform.OS !== 'web') {
 
 export const REMINDER_CHANNEL_ID = 'daily_reminders';
 
-export function isNotificationsSupported(): boolean {
-  return NotificationsModule !== null && !isUnsupportedExpoGoAndroid && Platform.OS !== 'web';
-}
-
 export async function setupNotificationChannel(): Promise<void> {
   if (!NotificationsModule || Platform.OS !== 'android') return;
   try {

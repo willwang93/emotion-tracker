@@ -56,53 +56,6 @@ export async function withDb<T>(operation: (db: SQLite.SQLiteDatabase) => Promis
   }
 }
 
-export function getDatabaseSync(): SQLite.SQLiteDatabase {
-  if (!globalThis.__app_sqlite_db) {
-    const db = SQLite.openDatabaseSync(DB_NAME);
-    initDatabaseSync(db);
-    globalThis.__app_sqlite_db = db;
-    globalThis.__app_sqlite_is_initialized = true;
-  }
-  return globalThis.__app_sqlite_db;
-}
-
-function initDatabaseSync(db: SQLite.SQLiteDatabase) {
-  db.execSync(`
-    PRAGMA journal_mode = WAL;
-
-    CREATE TABLE IF NOT EXISTS check_ins (
-      id TEXT PRIMARY KEY,
-      timestamp INTEGER NOT NULL,
-      quadrant TEXT NOT NULL,
-      energy_level INTEGER NOT NULL,
-      pleasantness_level INTEGER NOT NULL,
-      primary_emotion TEXT NOT NULL,
-      intensity INTEGER NOT NULL,
-      somatic_sensations TEXT,
-      context_who TEXT,
-      context_what TEXT,
-      context_where TEXT,
-      trigger_note TEXT,
-      urge_note TEXT,
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS reminder_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      enabled INTEGER NOT NULL DEFAULT 1,
-      times TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-
-    INSERT OR IGNORE INTO reminder_settings (id, enabled, times)
-    VALUES (1, 1, '["09:00", "13:00", "18:00", "21:30"]');
-  `);
-}
-
 async function initDatabase(db: SQLite.SQLiteDatabase) {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -232,15 +185,6 @@ export async function getCheckInsForDay(date: Date): Promise<CheckIn[]> {
     const rows = await db.getAllAsync<any>(
       `SELECT * FROM check_ins WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC;`,
       [startOfDay, endOfDay]
-    );
-    return rows.map(mapRowToCheckIn);
-  });
-}
-
-export async function getAllCheckIns(): Promise<CheckIn[]> {
-  return withDb(async (db) => {
-    const rows = await db.getAllAsync<any>(
-      `SELECT * FROM check_ins ORDER BY timestamp DESC;`
     );
     return rows.map(mapRowToCheckIn);
   });

@@ -76,12 +76,11 @@ npx tsc --noEmit
 ├── app.json                 # Expo project configuration & native Android permissions
 ├── src/
 │   ├── components/          # UI Components
-│   │   ├── MicroCheckInModal.tsx  # Multi-step check-in wizard (Mood Meter -> Sensations -> Context -> Reflection)
-│   │   ├── QuadrantSelector.tsx   # 2x2 Yale Mood Meter quadrant grid
+│   │   ├── MicroCheckInModal.tsx  # Multi-step check-in wizard (Mood Meter -> Nuance -> Context -> Intensity -> Note)
 │   │   ├── ReminderModal.tsx      # Reminder settings & time scheduling
 │   │   └── TimelineCard.tsx       # Editorial journal cards with emotion badges & notes
 │   ├── constants/
-│   │   └── moodMeter.ts     # Yale Mood Meter taxonomy (48 emotions, somatic markers, context tags)
+│   │   └── moodMeter.ts     # Yale Mood Meter taxonomy (48 emotions with granular definitions)
 │   ├── services/
 │   │   ├── db.ts            # expo-sqlite initialization, CRUD queries, database migrations
 │   │   └── notifications.ts # Local notification scheduling with Android 14 permissions
@@ -90,6 +89,7 @@ npx tsc --noEmit
 │   │   └── index.ts         # Theme tokens (warm editorial cream & dark slate)
 │   └── types/
 │       └── index.ts         # TypeScript interfaces (CheckIn, QuadrantType, EmotionItem, etc.)
+├── stitch/                  # Google Stitch design prototype exports, tokens, and screen mockups
 └── android/                 # Prebuilt native Android project (SDK 34 / Android 14)
 ```
 

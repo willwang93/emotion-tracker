@@ -324,7 +324,7 @@ function MainApp() {
               </TouchableOpacity>
             </View>
           ) : (
-            /* Screen 3: Today's Entries State with Emotional Arc */
+            /* Screen 3: Today's Entries State */
             <View style={styles.entriesContainer}>
               {/* Entries List Header */}
               <Text style={[styles.entriesSectionTitle, { color: theme.text }]}>

@@ -16,6 +16,8 @@
 | 4 | **Step 2: Nuanced Emotion Words with Definitions** | `2618893cedd546c6a29e2279d2cca2a8` | [screen.html](./screens/4_step2_nuanced_emotion_words/screen.html) | [screenshot.png](./screens/4_step2_nuanced_emotion_words/screenshot.png) |
 | 5 | **Step 3: What's Contributing (People & Place)** | `d8543e1226f04631b7828aaf1630a61d` | [screen.html](./screens/5_step3_whats_contributing/screen.html) | [screenshot.png](./screens/5_step3_whats_contributing/screenshot.png) |
 | 6 | **Step 4: What is causing this emotion? (Reflection Note)** | `bbc6f7d726d74e84b6d9dc00f1e2451f` | [screen.html](./screens/6_step4_reflection_note/screen.html) | [screenshot.png](./screens/6_step4_reflection_note/screenshot.png) |
+| 7 | **Prototype: Reminders (Bottom Sheet Open)** | `ec1eb4d349bd42a29ed92c77cb94fe18` | [screen.html](./screens/7_prototype_reminders_bottom_sheet_open/screen.html) | [screenshot.png](./screens/7_prototype_reminders_bottom_sheet_open/screenshot.png) |
+| 8 | **Step: Emotion Intensity (1–10)** | `b604edd83e4f46968ff8b3679a9cc772` | [screen.html](./screens/8_step_emotion_intensity/screen.html) | [screenshot.png](./screens/8_step_emotion_intensity/screenshot.png) |
 
 ---
 

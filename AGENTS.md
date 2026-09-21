@@ -35,10 +35,9 @@ npx expo install --check
 ```
 App.tsx                  # Root app layout, day navigation, state orchestration
 src/
-├── components/          # UI components (QuadrantSelector, MicroCheckInModal,
-│                        # TimelineCard, ReminderModal)
+├── components/          # UI components (MicroCheckInModal, TimelineCard, ReminderModal)
 ├── constants/
-│   └── moodMeter.ts     # Yale Mood Meter taxonomy (4 quadrants, 48 emotions, somatic chips)
+│   └── moodMeter.ts     # Yale Mood Meter taxonomy (48 emotions with definitions)
 ├── services/
 │   ├── db.ts            # expo-sqlite database initialization, CRUD queries, migrations
 │   └── notifications.ts # expo-notifications scheduling with Android 14 permissions
@@ -47,6 +46,7 @@ src/
 │   └── index.ts         # Dual theme color tokens (light editorial cream & dark slate)
 └── types/
     └── index.ts         # TypeScript interfaces (CheckIn, QuadrantType, EmotionItem, etc.)
+stitch/                  # Google Stitch design system tokens, HTML mockups, screen exports
 android/                 # Prebuilt native Android project (configured for SDK 34/Android 14)
 ```
 

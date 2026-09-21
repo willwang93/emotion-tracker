@@ -55,12 +55,6 @@ export const fonts = {
   extraBold: 'PlusJakartaSans-ExtraBold',
 };
 
-export const typography = {
-  serif: 'serif',
-  mono: 'monospace',
-  fonts,
-};
-
 export const darkTheme: ThemeColors = {
   isDark: true,
   background: '#0F1115',

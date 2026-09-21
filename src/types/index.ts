@@ -9,19 +9,6 @@ export interface EmotionItem {
   definition: string;
 }
 
-export interface QuadrantMeta {
-  id: QuadrantType;
-  label: string;
-  energyLabel: string;
-  pleasantnessLabel: string;
-  color: string;
-  subtleBg: string;
-  activeBorder: string;
-  textColor: string;
-  badgeBg: string;
-  emoji: string;
-}
-
 export interface CheckIn {
   id: string;
   timestamp: number; // epoch ms
