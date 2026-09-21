@@ -51,21 +51,21 @@ const getQuadrantTokens = (q: QuadrantType | null, isDark: boolean) => {
   switch (q) {
     case 'yellow':
       return {
-        selectedBg: isDark ? 'rgba(245, 158, 11, 0.28)' : '#FDE68A',
+        selectedBg: isDark ? '#3D2808' : '#FDE68A',
         selectedBorder: isDark ? '#F59E0B' : '#D97706',
         selectedText: isDark ? '#FFFBEB' : '#78350F',
         selectedIcon: isDark ? '#FFFBEB' : '#B45309',
       };
     case 'red':
       return {
-        selectedBg: isDark ? 'rgba(239, 68, 68, 0.28)' : '#FECACA',
+        selectedBg: isDark ? '#3E151E' : '#FECACA',
         selectedBorder: isDark ? '#EF4444' : '#DC2626',
         selectedText: isDark ? '#FFF1F2' : '#7F1D1D',
         selectedIcon: isDark ? '#FFF1F2' : '#B91C1C',
       };
     case 'blue':
       return {
-        selectedBg: isDark ? 'rgba(59, 130, 246, 0.28)' : '#BFDBFE',
+        selectedBg: isDark ? '#142742' : '#BFDBFE',
         selectedBorder: isDark ? '#3B82F6' : '#2563EB',
         selectedText: isDark ? '#EFF6FF' : '#1E3A8A',
         selectedIcon: isDark ? '#EFF6FF' : '#1D4ED8',
@@ -73,7 +73,7 @@ const getQuadrantTokens = (q: QuadrantType | null, isDark: boolean) => {
     case 'green':
     default:
       return {
-        selectedBg: isDark ? 'rgba(16, 185, 129, 0.28)' : '#A7F3D0',
+        selectedBg: isDark ? '#123827' : '#A7F3D0',
         selectedBorder: isDark ? '#10B981' : '#16A34A',
         selectedText: isDark ? '#ECFDF5' : '#064E3B',
         selectedIcon: isDark ? '#ECFDF5' : '#047857',
@@ -394,9 +394,14 @@ export const MicroCheckInModal: React.FC<Props> = ({
                                 : isDark
                                 ? theme.quadrants[cfg.key].cardBg
                                 : cfg.baseBgLight,
+                              borderColor: isSelected
+                                ? tokens.selectedBorder
+                                : 'transparent',
+                              borderWidth: isSelected ? 1.5 : 0,
+                              elevation: isDark ? 0 : (isSelected ? 5 : 2),
                             },
                             isSelected && styles.quadrantCardSelected,
-                            isSelected && { shadowColor: tokens.selectedBorder },
+                            isSelected && !isDark && { shadowColor: tokens.selectedBorder },
                           ]}
                         >
                           <View style={styles.quadrantCardTopRow}>
