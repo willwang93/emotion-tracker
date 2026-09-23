@@ -19,7 +19,6 @@ import { CheckIn, QuadrantType } from '../types';
 import { EMOTIONS } from '../constants/moodMeter';
 import { useAppTheme } from '../theme/ThemeContext';
 import { fonts } from '../theme';
-import * as Haptics from 'expo-haptics';
 
 interface Props {
   visible: boolean;
@@ -444,7 +443,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           activeOpacity={0.88}
                           onPress={() => {
                             handlePickQuadrant(cfg.key);
-                            Haptics.selectionAsync().catch(() => {});
                           }}
                           style={styles.blobCardWrapper}
                         >
@@ -515,7 +513,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           activeOpacity={0.8}
                           onPress={() => {
                             setIntensity(num);
-                            Haptics.selectionAsync().catch(() => {});
                           }}
                           style={[
                             styles.intensityPillBtn,
@@ -552,7 +549,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           activeOpacity={0.8}
                           onPress={() => {
                             setIntensity(num);
-                            Haptics.selectionAsync().catch(() => {});
                           }}
                           style={[
                             styles.intensityPillBtn,

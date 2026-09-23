@@ -34,7 +34,7 @@ Inspired by the Yale Center for Emotional Intelligence's Mood Meter (*How We Fee
 | **Runtime** | React Native / React | `0.86.3` / `19.2.3` |
 | **Language** | TypeScript (Strict) | `~6.0.3` |
 | **Local Storage** | `expo-sqlite` | `~57.0.2` |
-| **Notifications & Haptics** | `expo-notifications` / `expo-haptics` | `~57.0.17` / `~57.0.2` |
+| **Notifications** | `expo-notifications` | `~57.0.17` |
 | **Target Platform** | Android 14 (Google Pixel 5) | `com.willwang.emotiontracker` |
 
 ---
