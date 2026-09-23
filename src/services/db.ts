@@ -250,7 +250,7 @@ export async function getThemeSetting(): Promise<'system' | 'light' | 'dark'> {
     } catch (err) {
       console.warn('Error reading theme setting:', err);
     }
-    return 'system';
+    return 'light';
   });
 }
 

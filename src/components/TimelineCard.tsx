@@ -162,6 +162,8 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
 
   const displayChips = [...placeChips, ...peopleChips, ...somaticChips];
 
+  const noteContent = checkIn.triggerNote || checkIn.urgeNote || '';
+
   return (
     <View style={styles.swipeWrapper}>
       {/* Background delete indicator revealed on swipe left */}
@@ -209,10 +211,10 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
             </Text>
           </View>
 
-          {/* Middle: Reflection note text */}
-          {Boolean(checkIn.triggerNote || checkIn.urgeNote) && (
-            <Text style={[styles.noteText, { color: theme.textSecondary }]} numberOfLines={3}>
-              {checkIn.triggerNote || checkIn.urgeNote}
+          {/* Middle: Reflection note text (full, never truncates) */}
+          {Boolean(noteContent) && (
+            <Text style={[styles.noteText, { color: theme.textSecondary }]}>
+              {noteContent}
             </Text>
           )}
 

@@ -11,6 +11,7 @@ import {
   Platform,
   BackHandler,
   StatusBar,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -86,35 +87,90 @@ const QUADRANT_CONFIGS: {
   icon: keyof typeof MaterialIcons.glyphMap;
   energyText: string;
   pleasantText: string;
-  baseBgLight: string;
+  pleasantColorLight: string;
+  pleasantColorDark: string;
+  borderColorLight: string;
+  borderColorDark: string;
+  image: any;
+  imageScale?: number;
+  blobBorderRadius: {
+    borderTopLeftRadius: number;
+    borderTopRightRadius: number;
+    borderBottomRightRadius: number;
+    borderBottomLeftRadius: number;
+  };
 }[] = [
   {
     key: 'red',
     icon: 'air',
-    energyText: 'High energy',
-    pleasantText: 'unpleasant',
-    baseBgLight: '#FDE9E2',
+    energyText: 'High Energy',
+    pleasantText: 'Unpleasant',
+    pleasantColorLight: '#BA1A1A',
+    pleasantColorDark: '#FFB4AB',
+    borderColorLight: '#BA1A1A',
+    borderColorDark: '#FFB4AB',
+    image: require('../../assets/blobs/blob_high_unpleasant.png'),
+    imageScale: 1.18,
+    blobBorderRadius: {
+      borderTopLeftRadius: 65,
+      borderTopRightRadius: 75,
+      borderBottomRightRadius: 85,
+      borderBottomLeftRadius: 55,
+    },
   },
   {
     key: 'yellow',
     icon: 'wb-sunny',
-    energyText: 'High energy',
-    pleasantText: 'pleasant',
-    baseBgLight: '#FFF4D6',
+    energyText: 'High Energy',
+    pleasantText: 'Pleasant',
+    pleasantColorLight: '#D97706',
+    pleasantColorDark: '#FBBF24',
+    borderColorLight: '#F57C00',
+    borderColorDark: '#FBBF24',
+    image: require('../../assets/blobs/blob_high_pleasant.png'),
+    imageScale: 1.48,
+    blobBorderRadius: {
+      borderTopLeftRadius: 80,
+      borderTopRightRadius: 60,
+      borderBottomRightRadius: 62,
+      borderBottomLeftRadius: 75,
+    },
   },
   {
     key: 'blue',
     icon: 'bedtime',
-    energyText: 'Low energy',
-    pleasantText: 'unpleasant',
-    baseBgLight: '#EAF0FA',
+    energyText: 'Low Energy',
+    pleasantText: 'Unpleasant',
+    pleasantColorLight: '#194BE2',
+    pleasantColorDark: '#82B1FF',
+    borderColorLight: '#194BE2',
+    borderColorDark: '#82B1FF',
+    image: require('../../assets/blobs/blob_low_unpleasant.png'),
+    imageScale: 1.28,
+    blobBorderRadius: {
+      borderTopLeftRadius: 62,
+      borderTopRightRadius: 78,
+      borderBottomRightRadius: 72,
+      borderBottomLeftRadius: 68,
+    },
   },
   {
     key: 'green',
     icon: 'spa',
-    energyText: 'Low energy',
-    pleasantText: 'pleasant',
-    baseBgLight: '#E7F4EB',
+    energyText: 'Low Energy',
+    pleasantText: 'Pleasant',
+    pleasantColorLight: '#1B6C40',
+    pleasantColorDark: '#8AD7A1',
+    borderColorLight: '#1B6C40',
+    borderColorDark: '#8AD7A1',
+    image: require('../../assets/blobs/blob_low_pleasant.png'),
+    imageScale: 1.35,
+    blobBorderRadius: {
+      borderTopLeftRadius: 72,
+      borderTopRightRadius: 68,
+      borderBottomRightRadius: 80,
+      borderBottomLeftRadius: 60,
+    },
   },
 ];
 
@@ -379,75 +435,60 @@ export const MicroCheckInModal: React.FC<Props> = ({
                   <View style={styles.quadrantGrid}>
                     {QUADRANT_CONFIGS.map((cfg) => {
                       const isSelected = quadrant === cfg.key;
-                      const tokens = getQuadrantTokens(cfg.key, isDark);
-                      const quadColor = theme.quadrants[cfg.key].color;
+                      const borderColor = isDark ? cfg.borderColorDark : cfg.borderColorLight;
+                      const pleasantColor = isDark ? cfg.pleasantColorDark : cfg.pleasantColorLight;
+
                       return (
                         <TouchableOpacity
                           key={cfg.key}
                           activeOpacity={0.88}
-                          onPress={() => handlePickQuadrant(cfg.key)}
-                          style={[
-                            styles.quadrantCard,
-                            {
-                              backgroundColor: isSelected
-                                ? tokens.selectedBg
-                                : isDark
-                                ? theme.quadrants[cfg.key].cardBg
-                                : cfg.baseBgLight,
-                              borderColor: isSelected
-                                ? tokens.selectedBorder
-                                : 'transparent',
-                              borderWidth: isSelected ? 1.5 : 0,
-                              elevation: isDark ? 0 : (isSelected ? 5 : 2),
-                            },
-                            isSelected && styles.quadrantCardSelected,
-                            isSelected && !isDark && { shadowColor: tokens.selectedBorder },
-                          ]}
+                          onPress={() => {
+                            handlePickQuadrant(cfg.key);
+                            Haptics.selectionAsync().catch(() => {});
+                          }}
+                          style={styles.blobCardWrapper}
                         >
-                          <View style={styles.quadrantCardTopRow}>
-                            <View
+                          {/* Illustration Frame Container (Blob background removed) */}
+                          <View
+                            style={[
+                              styles.blobFrame,
+                              cfg.blobBorderRadius,
+                              {
+                                backgroundColor: 'transparent',
+                                borderColor: isSelected ? borderColor : 'transparent',
+                                borderWidth: isSelected ? 2.5 : 0,
+                              },
+                              isSelected && styles.blobFrameSelected,
+                            ]}
+                          >
+                            {/* Illustration Image */}
+                            <Image
+                              source={cfg.image}
                               style={[
-                                styles.quadrantIconCircle,
-                                {
-                                  backgroundColor: isSelected
-                                    ? isDark
-                                      ? 'rgba(255, 255, 255, 0.16)'
-                                      : 'rgba(255, 255, 255, 0.75)'
-                                    : isDark
-                                    ? `${quadColor}26`
-                                    : `${quadColor}1A`,
-                                },
+                                styles.blobIllustration,
+                                { transform: [{ scale: cfg.imageScale || 1.15 }] },
                               ]}
-                            >
-                              <MaterialIcons
-                                name={cfg.icon}
-                                size={24}
-                                color={isSelected ? tokens.selectedIcon : quadColor}
-                              />
-                            </View>
+                              resizeMode="contain"
+                            />
                           </View>
 
-                          <View style={styles.quadrantTextGroup}>
+                          {/* Labels: Pleasant indicator and Energy */}
+                          <View style={styles.blobLabelsContainer}>
                             <Text
                               style={[
-                                styles.quadrantEnergyText,
-                                { color: isSelected ? tokens.selectedText : theme.text },
-                              ]}
-                            >
-                              {cfg.energyText}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.quadrantPleasantText,
-                                {
-                                  color: isSelected
-                                    ? tokens.selectedText
-                                    : theme.textMuted,
-                                  opacity: isSelected ? 0.82 : 1,
-                                },
+                                styles.blobPleasantText,
+                                { color: pleasantColor },
                               ]}
                             >
                               {cfg.pleasantText}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.blobEnergyText,
+                                { color: theme.text },
+                              ]}
+                            >
+                              {cfg.energyText}
                             </Text>
                           </View>
                         </TouchableOpacity>
@@ -768,53 +809,46 @@ const styles = StyleSheet.create({
     gap: 14,
     justifyContent: 'space-between',
   },
-  quadrantCard: {
-    width: '47.5%',
-    height: 154,
-    borderRadius: 24,
-    padding: 18,
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    borderWidth: 0,
-    shadowColor: '#BD8948',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 2,
-  },
-  quadrantCardSelected: {
-    transform: [{ scale: 1.02 }],
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    elevation: 5,
-  },
-  quadrantCardTopRow: {
-    flexDirection: 'row',
+  blobCardWrapper: {
+    width: '47%',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    marginBottom: 8,
   },
-  quadrantIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  blobFrame: {
+    width: 144,
+    height: 144,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 8,
+    marginBottom: 12,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  quadrantTextGroup: {
-    alignItems: 'flex-start',
+  blobFrameSelected: {
+    transform: [{ scale: 1.05 }],
   },
-  quadrantEnergyText: {
+  blobIllustration: {
+    width: '100%',
+    height: '100%',
+  },
+  blobLabelsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  blobPleasantText: {
+    fontSize: 11,
+    fontFamily: fonts.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  blobEnergyText: {
     fontSize: 16,
     fontFamily: fonts.bold,
-    marginBottom: 2,
-    textAlign: 'left',
-  },
-  quadrantPleasantText: {
-    fontSize: 13,
-    fontFamily: fonts.regular,
-    textAlign: 'left',
+    lineHeight: 20,
+    textAlign: 'center',
   },
   step2Container: {
     flex: 1,

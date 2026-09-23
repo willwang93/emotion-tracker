@@ -13,20 +13,26 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: darkTheme,
-  isDark: true,
-  mode: 'system',
+  theme: lightTheme,
+  isDark: false,
+  mode: 'light',
   setMode: async () => {},
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const hookScheme = useColorScheme();
   const [appearanceScheme, setAppearanceScheme] = useState(Appearance.getColorScheme());
-  const [mode, setModeState] = useState<ThemeMode>('system');
+  const [mode, setModeState] = useState<ThemeMode>('light');
 
   useEffect(() => {
     getThemeSetting().then((savedMode) => {
-      setModeState(savedMode);
+      // If no setting or previously saved, ensure light mode
+      if (savedMode === 'dark' || savedMode === 'system') {
+        setModeState('light');
+        setThemeSetting('light').catch(() => {});
+      } else {
+        setModeState(savedMode);
+      }
     });
 
     const sub = Appearance.addChangeListener(({ colorScheme }) => {
@@ -41,11 +47,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await setThemeSetting(newMode);
   };
 
-  const activeScheme = hookScheme || appearanceScheme;
-  const isDark =
-    mode === 'system'
-      ? activeScheme === 'dark'
-      : mode === 'dark';
+  const isDark = mode === 'dark';
 
   const theme = isDark ? darkTheme : lightTheme;
 
