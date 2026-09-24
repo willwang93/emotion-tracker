@@ -9,10 +9,10 @@ import {
   RefreshControl,
   StatusBar,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
-import { CheckIn, QuadrantType, ReminderSetting } from './src/types';
+import { CheckIn, QuadrantType } from './src/types';
 import {
   getDatabase,
   getCheckInsForDay,
@@ -20,13 +20,9 @@ import {
   insertCheckIn,
   updateCheckIn,
   deleteCheckIn,
-  getReminderSettings,
-  updateReminderSettings,
 } from './src/services/db';
-import { scheduleReminders } from './src/services/notifications';
 import { TimelineCard } from './src/components/TimelineCard';
 import { MicroCheckInModal } from './src/components/MicroCheckInModal';
-import { ReminderModal } from './src/components/ReminderModal';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeContext';
 import { fonts } from './src/theme';
 
@@ -55,7 +51,7 @@ function getGreeting(date: Date): string {
 
 function MainApp() {
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [weekMoodMap, setWeekMoodMap] = useState<Record<string, QuadrantType>>({});
@@ -63,12 +59,6 @@ function MainApp() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isCheckInModalVisible, setIsCheckInModalVisible] = useState<boolean>(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
-  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState<boolean>(false);
-  const [reminderSetting, setReminderSetting] = useState<ReminderSetting>({
-    id: 1,
-    enabled: true,
-    times: ['09:00', '13:00', '18:00', '21:30'],
-  });
 
   const weekDays = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
 
@@ -118,10 +108,6 @@ function MainApp() {
         moodMap[dayDateStr] = dominantQuadrant;
       }
       setWeekMoodMap(moodMap);
-
-      const settings = await getReminderSettings();
-      setReminderSetting(settings);
-      scheduleReminders(settings).catch((e) => console.warn('Startup reminder sync failed:', e));
     } catch (err) {
       console.error('Failed to load check-ins:', err);
     } finally {
@@ -181,16 +167,6 @@ function MainApp() {
     }
   };
 
-  const handleSaveSettings = async (newSettings: ReminderSetting) => {
-    try {
-      await updateReminderSettings(newSettings);
-      setReminderSetting(newSettings);
-      await scheduleReminders(newSettings);
-    } catch (err) {
-      console.error('Failed to update settings:', err);
-    }
-  };
-
   const dateKicker = selectedDate.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -216,7 +192,7 @@ function MainApp() {
         backgroundColor="transparent"
       />
 
-      {/* Greeting & Date Banner with Profile Icon aligned */}
+      {/* Greeting & Date Banner */}
       <View style={styles.masthead}>
         <View style={styles.headerRow}>
           <View style={styles.headerTextGroup}>
@@ -227,14 +203,6 @@ function MainApp() {
               {greeting}
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => setIsSettingsModalVisible(true)}
-            style={[styles.profileBtn, { backgroundColor: theme.btnPrimaryBg }]}
-            activeOpacity={0.85}
-            accessibilityLabel="Open reminders"
-          >
-            <MaterialIcons name="notifications" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         {/* 7-Day Weightless Week Ribbon */}
@@ -254,7 +222,7 @@ function MainApp() {
                   style={[
                     styles.weekDayCircle,
                     isSelected && {
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.14)' : '#F5EAD4',
+                      backgroundColor: '#F5EAD4',
                       borderRadius: 9999,
                     },
                   ]}
@@ -277,8 +245,6 @@ function MainApp() {
                     {
                       backgroundColor: moodQuadrant
                         ? theme.quadrants[moodQuadrant].color
-                        : isDark
-                        ? 'rgba(255, 255, 255, 0.15)'
                         : 'rgba(0, 0, 0, 0.12)',
                     },
                   ]}
@@ -353,9 +319,7 @@ function MainApp() {
           style={[
             styles.bottomFloatingContainer,
             {
-              backgroundColor: isDark
-                ? 'rgba(15, 17, 21, 0.94)'
-                : 'rgba(254, 249, 238, 0.94)',
+              backgroundColor: 'rgba(254, 249, 238, 0.94)',
             },
           ]}
         >
@@ -376,14 +340,6 @@ function MainApp() {
         onClose={handleCloseCheckInModal}
         onSave={handleSaveCheckIn}
         initialCheckIn={editingCheckIn}
-      />
-
-      {/* Settings / Reminders Modal */}
-      <ReminderModal
-        visible={isSettingsModalVisible}
-        onClose={() => setIsSettingsModalVisible(false)}
-        setting={reminderSetting}
-        onSaveSettings={handleSaveSettings}
       />
     </View>
   );
@@ -428,19 +384,6 @@ const styles = StyleSheet.create({
   },
   headerTextGroup: {
     flex: 1,
-    paddingRight: 16,
-  },
-  profileBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F57C00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 2,
   },
   dateKicker: {
     fontSize: 11,

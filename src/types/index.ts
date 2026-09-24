@@ -25,9 +25,3 @@ export interface CheckIn {
   urgeNote?: string;
   createdAt: number;
 }
-
-export interface ReminderSetting {
-  id: number;
-  enabled: boolean;
-  times: string[]; // e.g. ["09:00", "13:00", "18:00", "21:30"]
-}

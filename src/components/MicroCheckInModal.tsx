@@ -47,36 +47,36 @@ const PLACE_OPTIONS: { name: string; icon: keyof typeof MaterialIcons.glyphMap }
   { name: 'Cafe/Restaurant', icon: 'local-cafe' },
 ];
 
-const getQuadrantTokens = (q: QuadrantType | null, isDark: boolean) => {
+const getQuadrantTokens = (q: QuadrantType | null) => {
   switch (q) {
     case 'yellow':
       return {
-        selectedBg: isDark ? '#3D2808' : '#FDE68A',
-        selectedBorder: isDark ? '#F59E0B' : '#D97706',
-        selectedText: isDark ? '#FFFBEB' : '#78350F',
-        selectedIcon: isDark ? '#FFFBEB' : '#B45309',
+        selectedBg: '#FDE68A',
+        selectedBorder: '#D97706',
+        selectedText: '#78350F',
+        selectedIcon: '#B45309',
       };
     case 'red':
       return {
-        selectedBg: isDark ? '#3E151E' : '#FECACA',
-        selectedBorder: isDark ? '#EF4444' : '#DC2626',
-        selectedText: isDark ? '#FFF1F2' : '#7F1D1D',
-        selectedIcon: isDark ? '#FFF1F2' : '#B91C1C',
+        selectedBg: '#FECACA',
+        selectedBorder: '#DC2626',
+        selectedText: '#7F1D1D',
+        selectedIcon: '#B91C1C',
       };
     case 'blue':
       return {
-        selectedBg: isDark ? '#142742' : '#BFDBFE',
-        selectedBorder: isDark ? '#3B82F6' : '#2563EB',
-        selectedText: isDark ? '#EFF6FF' : '#1E3A8A',
-        selectedIcon: isDark ? '#EFF6FF' : '#1D4ED8',
+        selectedBg: '#BFDBFE',
+        selectedBorder: '#2563EB',
+        selectedText: '#1E3A8A',
+        selectedIcon: '#1D4ED8',
       };
     case 'green':
     default:
       return {
-        selectedBg: isDark ? '#123827' : '#A7F3D0',
-        selectedBorder: isDark ? '#10B981' : '#16A34A',
-        selectedText: isDark ? '#ECFDF5' : '#064E3B',
-        selectedIcon: isDark ? '#ECFDF5' : '#047857',
+        selectedBg: '#A7F3D0',
+        selectedBorder: '#16A34A',
+        selectedText: '#064E3B',
+        selectedIcon: '#047857',
       };
   }
 };
@@ -86,10 +86,8 @@ const QUADRANT_CONFIGS: {
   icon: keyof typeof MaterialIcons.glyphMap;
   energyText: string;
   pleasantText: string;
-  pleasantColorLight: string;
-  pleasantColorDark: string;
-  borderColorLight: string;
-  borderColorDark: string;
+  pleasantColor: string;
+  borderColor: string;
   image: any;
   imageScale?: number;
   blobBorderRadius: {
@@ -104,10 +102,8 @@ const QUADRANT_CONFIGS: {
     icon: 'air',
     energyText: 'High Energy',
     pleasantText: 'Unpleasant',
-    pleasantColorLight: '#BA1A1A',
-    pleasantColorDark: '#FFB4AB',
-    borderColorLight: '#BA1A1A',
-    borderColorDark: '#FFB4AB',
+    pleasantColor: '#BA1A1A',
+    borderColor: '#BA1A1A',
     image: require('../../assets/blobs/blob_high_unpleasant.png'),
     imageScale: 1.18,
     blobBorderRadius: {
@@ -122,10 +118,8 @@ const QUADRANT_CONFIGS: {
     icon: 'wb-sunny',
     energyText: 'High Energy',
     pleasantText: 'Pleasant',
-    pleasantColorLight: '#D97706',
-    pleasantColorDark: '#FBBF24',
-    borderColorLight: '#F57C00',
-    borderColorDark: '#FBBF24',
+    pleasantColor: '#D97706',
+    borderColor: '#F57C00',
     image: require('../../assets/blobs/blob_high_pleasant.png'),
     imageScale: 1.48,
     blobBorderRadius: {
@@ -140,10 +134,8 @@ const QUADRANT_CONFIGS: {
     icon: 'bedtime',
     energyText: 'Low Energy',
     pleasantText: 'Unpleasant',
-    pleasantColorLight: '#194BE2',
-    pleasantColorDark: '#82B1FF',
-    borderColorLight: '#194BE2',
-    borderColorDark: '#82B1FF',
+    pleasantColor: '#194BE2',
+    borderColor: '#194BE2',
     image: require('../../assets/blobs/blob_low_unpleasant.png'),
     imageScale: 1.28,
     blobBorderRadius: {
@@ -158,10 +150,8 @@ const QUADRANT_CONFIGS: {
     icon: 'spa',
     energyText: 'Low Energy',
     pleasantText: 'Pleasant',
-    pleasantColorLight: '#1B6C40',
-    pleasantColorDark: '#8AD7A1',
-    borderColorLight: '#1B6C40',
-    borderColorDark: '#8AD7A1',
+    pleasantColor: '#1B6C40',
+    borderColor: '#1B6C40',
     image: require('../../assets/blobs/blob_low_pleasant.png'),
     imageScale: 1.35,
     blobBorderRadius: {
@@ -180,7 +170,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
   initialCheckIn,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [quadrant, setQuadrant] = useState<QuadrantType | null>(null);
   const [primaryEmotion, setPrimaryEmotion] = useState<string | null>(null);
@@ -282,7 +272,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
     onClose();
   };
 
-  const qTokens = getQuadrantTokens(quadrant, isDark);
+  const qTokens = getQuadrantTokens(quadrant);
   const currentEmotionList = quadrant ? EMOTIONS[quadrant] || [] : [];
   const activeEmotionObj = currentEmotionList.find((e) => e.name === primaryEmotion);
   const currentDefinition =
@@ -395,8 +385,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           {
                             backgroundColor: isSelected
                               ? qTokens.selectedBg
-                              : isDark
-                              ? theme.surfaceSecondary
                               : '#FFFFFF',
                           },
                         ]}
@@ -434,8 +422,8 @@ export const MicroCheckInModal: React.FC<Props> = ({
                   <View style={styles.quadrantGrid}>
                     {QUADRANT_CONFIGS.map((cfg) => {
                       const isSelected = quadrant === cfg.key;
-                      const borderColor = isDark ? cfg.borderColorDark : cfg.borderColorLight;
-                      const pleasantColor = isDark ? cfg.pleasantColorDark : cfg.pleasantColorLight;
+                      const borderColor = cfg.borderColor;
+                      const pleasantColor = cfg.pleasantColor;
 
                       return (
                         <TouchableOpacity
@@ -519,8 +507,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
                             {
                               backgroundColor: isSelected
                                 ? qTokens.selectedBg
-                                : isDark
-                                ? theme.surfaceSecondary
                                 : '#FFFFFF',
                             },
                           ]}
@@ -555,8 +541,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
                             {
                               backgroundColor: isSelected
                                 ? qTokens.selectedBg
-                                : isDark
-                                ? theme.surfaceSecondary
                                 : '#FFFFFF',
                             },
                           ]}
@@ -604,9 +588,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           {
                             backgroundColor: isSelected
                               ? qTokens.selectedBg
-                              : isDark
-                              ? theme.surfaceSecondary
-                              : '#F8F3E8',
+                              : '#FFFFFF',
                           },
                         ]}
                       >
@@ -616,9 +598,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           color={
                             isSelected
                               ? qTokens.selectedIcon
-                              : isDark
-                              ? theme.textSecondary
-                              : '#8B7263'
+                              : theme.textSecondary
                           }
                           style={styles.chipIconSpacing}
                         />
@@ -628,9 +608,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                             {
                               color: isSelected
                                 ? qTokens.selectedText
-                                : isDark
-                                ? theme.text
-                                : '#574235',
+                                : theme.text,
                               fontFamily: isSelected ? fonts.bold : fonts.semiBold,
                             },
                           ]}
@@ -664,9 +642,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           {
                             backgroundColor: isSelected
                               ? qTokens.selectedBg
-                              : isDark
-                              ? theme.surfaceSecondary
-                              : '#F8F3E8',
+                              : '#FFFFFF',
                           },
                         ]}
                       >
@@ -676,9 +652,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                           color={
                             isSelected
                               ? qTokens.selectedIcon
-                              : isDark
-                              ? theme.textSecondary
-                              : '#8B7263'
+                              : theme.textSecondary
                           }
                           style={styles.chipIconSpacing}
                         />
@@ -688,9 +662,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                             {
                               color: isSelected
                                 ? qTokens.selectedText
-                                : isDark
-                                ? theme.text
-                                : '#574235',
+                                : theme.text,
                               fontFamily: isSelected ? fonts.bold : fonts.semiBold,
                             },
                           ]}
@@ -715,7 +687,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
                   style={[
                     styles.textareaCard,
                     {
-                      backgroundColor: isDark ? theme.surfaceSecondary : '#FFF5E4',
+                      backgroundColor: '#FFF5E4',
                       borderColor: theme.border,
                     },
                   ]}
@@ -921,9 +893,9 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     shadowColor: '#BD8948',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 1.5,
   },
   chipIconSpacing: {
     marginRight: 8,

@@ -20,7 +20,7 @@ export const AppTextInput: React.FC<AppTextInputProps> = ({
   style,
   ...rest
 }) => {
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
 
   return (
     <View style={[styles.wrapper, containerStyle]}>

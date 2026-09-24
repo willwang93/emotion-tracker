@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { CheckIn, ReminderSetting } from '../types';
+import { CheckIn } from '../types';
 
 const DB_NAME = 'emotion_tracker.db';
 
@@ -76,20 +76,6 @@ async function initDatabase(db: SQLite.SQLiteDatabase) {
       urge_note TEXT,
       created_at INTEGER NOT NULL
     );
-
-    CREATE TABLE IF NOT EXISTS reminder_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      enabled INTEGER NOT NULL DEFAULT 1,
-      times TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-
-    INSERT OR IGNORE INTO reminder_settings (id, enabled, times)
-    VALUES (1, 1, '["09:00", "13:00", "18:00", "21:30"]');
   `);
 }
 
@@ -206,64 +192,6 @@ export async function getCheckInsForDateRange(startDate: Date, endDate: Date): P
 export async function deleteCheckIn(id: string): Promise<void> {
   return withDb(async (db) => {
     await db.runAsync(`DELETE FROM check_ins WHERE id = ?;`, [id]);
-  });
-}
-
-export async function getReminderSettings(): Promise<ReminderSetting> {
-  return withDb(async (db) => {
-    const row = await db.getFirstAsync<any>(`SELECT * FROM reminder_settings WHERE id = 1;`);
-    if (!row) {
-      return { id: 1, enabled: true, times: ['09:00', '13:00', '18:00', '21:30'] };
-    }
-    let parsedTimes: string[] = [];
-    try {
-      parsedTimes = typeof row.times === 'string' ? JSON.parse(row.times || '[]') : row.times;
-    } catch {
-      parsedTimes = ['09:00', '13:00', '18:00', '21:30'];
-    }
-    return {
-      id: row.id,
-      enabled: Boolean(row.enabled),
-      times: Array.isArray(parsedTimes) ? parsedTimes : ['09:00', '13:00', '18:00', '21:30'],
-    };
-  });
-}
-
-export async function updateReminderSettings(settings: ReminderSetting): Promise<void> {
-  return withDb(async (db) => {
-    await db.runAsync(
-      `INSERT OR REPLACE INTO reminder_settings (id, enabled, times) VALUES (1, ?, ?);`,
-      [settings.enabled ? 1 : 0, JSON.stringify(settings.times)]
-    );
-  });
-}
-
-export async function getThemeSetting(): Promise<'system' | 'light' | 'dark'> {
-  return withDb(async (db) => {
-    try {
-      const row = await db.getFirstAsync<any>(
-        `SELECT value FROM app_settings WHERE key = 'theme_mode';`
-      );
-      if (row && (row.value === 'light' || row.value === 'dark' || row.value === 'system')) {
-        return row.value;
-      }
-    } catch (err) {
-      console.warn('Error reading theme setting:', err);
-    }
-    return 'light';
-  });
-}
-
-export async function setThemeSetting(mode: 'system' | 'light' | 'dark'): Promise<void> {
-  return withDb(async (db) => {
-    try {
-      await db.runAsync(
-        `INSERT OR REPLACE INTO app_settings (key, value) VALUES ('theme_mode', ?);`,
-        [mode]
-      );
-    } catch (err) {
-      console.warn('Error saving theme setting:', err);
-    }
   });
 }
 

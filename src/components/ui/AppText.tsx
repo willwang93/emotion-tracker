@@ -37,7 +37,7 @@ export const AppText: React.FC<AppTextProps> = ({
   else if (color === 'secondary') resolvedColor = theme.textSecondary;
   else if (color === 'muted') resolvedColor = theme.textMuted;
   else if (color === 'subtle') resolvedColor = theme.textSubtle;
-  else if (color === 'inverse') resolvedColor = theme.isDark ? '#1D1C15' : '#FFFFFF';
+  else if (color === 'inverse') resolvedColor = '#FFFFFF';
   else if (color) resolvedColor = color;
 
   const variantStyle = VARIANT_STYLES[variant];

@@ -15,7 +15,6 @@ export interface QuadrantColorSet {
 }
 
 export interface ThemeColors {
-  isDark: boolean;
   background: string;
   surface: string;
   surfaceSecondary: string;
@@ -55,94 +54,7 @@ export const fonts = {
   extraBold: 'PlusJakartaSans-ExtraBold',
 };
 
-export const darkTheme: ThemeColors = {
-  isDark: true,
-  background: '#0F1115',
-  surface: '#181B22',
-  surfaceSecondary: '#20242D',
-  surfaceElevated: '#20242D',
-  surfaceContainer: '#1C2028',
-  surfaceContainerLow: '#15181E',
-  surfaceContainerHigh: '#252A34',
-  border: 'rgba(255, 255, 255, 0.07)',
-  borderMuted: 'rgba(255, 255, 255, 0.04)',
-  borderFocus: 'rgba(255, 255, 255, 0.15)',
-  text: '#F3F0EA',
-  textSecondary: '#C7C3BD',
-  textMuted: '#8C867E',
-  textSubtle: '#66615B',
-  chipBg: 'rgba(255, 255, 255, 0.06)',
-  chipBorder: 'rgba(255, 255, 255, 0.05)',
-  chipText: '#C7C3BD',
-  btnPrimaryBg: '#F57C00',
-  btnPrimaryText: '#FFFFFF',
-  activeDayBg: 'rgba(255, 255, 255, 0.12)',
-  sunGlow: 'rgba(245, 124, 0, 0.25)',
-  inputBg: '#181B22',
-  inputBorder: 'rgba(255, 255, 255, 0.10)',
-  cardBg: '#181B22',
-  cardBorder: 'rgba(255, 255, 255, 0.07)',
-  divider: 'rgba(255, 255, 255, 0.07)',
-  shadowColor: '#000000',
-  statusBar: 'light',
-  quadrants: {
-    yellow: {
-      color: '#F59E0B',
-      subtleBg: 'rgba(245, 158, 11, 0.14)',
-      cardBg: '#261D10',
-      cardBorder: 'rgba(245, 158, 11, 0.40)',
-      textColor: '#FDE68A',
-      subTextColor: '#FCD34D',
-      selectedChipBg: 'rgba(245, 158, 11, 0.24)',
-      selectedChipBorder: 'rgba(245, 158, 11, 0.60)',
-      selectedChipText: '#FFFBEB',
-      glow: 'rgba(245, 158, 11, 0.25)',
-      activeBorder: 'rgba(245, 158, 11, 0.60)',
-    },
-    red: {
-      color: '#EF4444',
-      subtleBg: 'rgba(239, 68, 68, 0.14)',
-      cardBg: '#281217',
-      cardBorder: 'rgba(239, 68, 68, 0.40)',
-      textColor: '#FECDD3',
-      subTextColor: '#FDA4AF',
-      selectedChipBg: 'rgba(239, 68, 68, 0.24)',
-      selectedChipBorder: 'rgba(239, 68, 68, 0.60)',
-      selectedChipText: '#FFF1F2',
-      glow: 'rgba(239, 68, 68, 0.25)',
-      activeBorder: 'rgba(239, 68, 68, 0.60)',
-    },
-    green: {
-      color: '#10B981',
-      subtleBg: 'rgba(16, 185, 129, 0.14)',
-      cardBg: '#0F241C',
-      cardBorder: 'rgba(16, 185, 129, 0.40)',
-      textColor: '#A7F3D0',
-      subTextColor: '#6EE7B7',
-      selectedChipBg: 'rgba(16, 185, 129, 0.24)',
-      selectedChipBorder: 'rgba(16, 185, 129, 0.60)',
-      selectedChipText: '#ECFDF5',
-      glow: 'rgba(16, 185, 129, 0.25)',
-      activeBorder: 'rgba(16, 185, 129, 0.60)',
-    },
-    blue: {
-      color: '#3B82F6',
-      subtleBg: 'rgba(59, 130, 246, 0.14)',
-      cardBg: '#111D2D',
-      cardBorder: 'rgba(59, 130, 246, 0.40)',
-      textColor: '#BFDBFE',
-      subTextColor: '#93C5FD',
-      selectedChipBg: 'rgba(59, 130, 246, 0.24)',
-      selectedChipBorder: 'rgba(59, 130, 246, 0.60)',
-      selectedChipText: '#EFF6FF',
-      glow: 'rgba(59, 130, 246, 0.25)',
-      activeBorder: 'rgba(59, 130, 246, 0.60)',
-    },
-  },
-};
-
 export const lightTheme: ThemeColors = {
-  isDark: false,
   background: '#FEF9EE',
   surface: '#FFFFFF',
   surfaceSecondary: '#FFF5E4',
@@ -226,4 +138,6 @@ export const lightTheme: ThemeColors = {
     },
   },
 };
+
+export const theme: ThemeColors = lightTheme;
 

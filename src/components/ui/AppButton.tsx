@@ -40,7 +40,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   disabled,
   ...rest
 }) => {
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
 
   let bgColor = theme.btnPrimaryBg;
   let textColor = theme.btnPrimaryText;
@@ -80,7 +80,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
         {
           height,
           paddingHorizontal,
-          backgroundColor: disabled ? (isDark ? '#2A2E39' : '#E5DFD5') : bgColor,
+          backgroundColor: disabled ? '#E5DFD5' : bgColor,
           borderColor,
           borderWidth,
           opacity: disabled ? 0.6 : 1,

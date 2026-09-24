@@ -25,9 +25,9 @@ export const AppChip: React.FC<AppChipProps> = ({
   style,
   textStyle,
 }) => {
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
 
-  let bgColor = isDark ? theme.surfaceSecondary : '#FFFFFF';
+  let bgColor = '#FFFFFF';
   let textColor = theme.text;
   let borderColor = theme.borderMuted;
 

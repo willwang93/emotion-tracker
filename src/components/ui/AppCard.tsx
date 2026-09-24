@@ -23,7 +23,7 @@ export const AppCard: React.FC<AppCardProps> = ({
   children,
   ...rest
 }) => {
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
 
   let bgColor = theme.cardBg;
   let borderColor = theme.cardBorder;
@@ -52,7 +52,7 @@ export const AppCard: React.FC<AppCardProps> = ({
         elevated && {
           shadowColor: theme.shadowColor,
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDark ? 0.3 : 0.08,
+          shadowOpacity: 0.08,
           shadowRadius: 16,
           elevation: 2,
         },

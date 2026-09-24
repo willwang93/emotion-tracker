@@ -15,14 +15,12 @@ Inspired by the Yale Center for Emotional Intelligence's Mood Meter (*How We Fee
   * Quick-select body sensations (chest tightness, clenched jaw, racing heart, relaxed, warm, etc.).
   * Context tagging (*Who:* Alone, Partner, Coworker, Friend, Family; *Where:* Home, Office, Transit, Outdoors).
 * **Literary Editorial Design:**
-  * Minimalist, magazine-inspired aesthetic with serif typography and clean layouts.
-  * Native dual-theme support: Warm editorial cream (`#FBF9F5`) and dark slate (`#0F1115`).
+  * Minimalist, magazine-inspired aesthetic with Plus Jakarta Sans typography and clean layouts.
+  * Warm editorial cream aesthetic (`#FEF9EE`) with Yale Mood Meter quadrant accent colors.
   * Chronological journal timeline displaying quote reflections, emotion badges, and somatic markers.
 * **100% Private & Offline-First:**
   * All check-ins and reflections are stored strictly on-device in a local SQLite database (`emotion_tracker.db`).
   * Zero third-party telemetry, tracking, or cloud dependencies. Your emotional life remains entirely on your device.
-* **Smart Notification Nudges:**
-  * Configurable local notification reminders (Android 14 exact alarm scheduling) to encourage regular emotional check-ins throughout the day.
 
 ---
 
@@ -34,7 +32,6 @@ Inspired by the Yale Center for Emotional Intelligence's Mood Meter (*How We Fee
 | **Runtime** | React Native / React | `0.86.3` / `19.2.3` |
 | **Language** | TypeScript (Strict) | `~6.0.3` |
 | **Local Storage** | `expo-sqlite` | `~57.0.2` |
-| **Notifications** | `expo-notifications` | `~57.0.17` |
 | **Target Platform** | Android 14 (Google Pixel 5) | `com.willwang.emotiontracker` |
 
 ---
@@ -77,18 +74,16 @@ npx tsc --noEmit
 ├── src/
 │   ├── components/          # UI Components
 │   │   ├── MicroCheckInModal.tsx  # Multi-step check-in wizard (Mood Meter -> Nuance -> Context -> Intensity -> Note)
-│   │   ├── ReminderModal.tsx      # Reminder settings & time scheduling
 │   │   └── TimelineCard.tsx       # Editorial journal cards with emotion badges & notes
 │   ├── constants/
 │   │   └── moodMeter.ts     # Yale Mood Meter taxonomy (48 emotions with granular definitions)
 │   ├── services/
-│   │   ├── db.ts            # expo-sqlite initialization, CRUD queries, database migrations
-│   │   └── notifications.ts # Local notification scheduling with Android 14 permissions
+│   │   └── db.ts            # expo-sqlite initialization, CRUD queries, database migrations
 │   ├── theme/
 │   │   ├── ThemeContext.tsx # React Context provider & useAppTheme hook
-│   │   └── index.ts         # Theme tokens (warm editorial cream & dark slate)
+│   │   └── index.ts         # Theme tokens (editorial cream)
 │   └── types/
-│       └── index.ts         # TypeScript interfaces (CheckIn, QuadrantType, EmotionItem, etc.)
+│       └── index.ts         # TypeScript interfaces (CheckIn, QuadrantType, EmotionItem)
 ├── stitch/                  # Google Stitch design prototype exports, tokens, and screen mockups
 └── android/                 # Prebuilt native Android project (SDK 34 / Android 14)
 ```

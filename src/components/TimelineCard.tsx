@@ -82,7 +82,7 @@ function getChipIcon(name: string, color: string) {
 }
 
 export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => {
-  const { theme, isDark } = useAppTheme();
+  const { theme } = useAppTheme();
   const qMeta = theme.quadrants[checkIn.quadrant] || theme.quadrants.green;
 
   const dateObj = new Date(checkIn.timestamp);
@@ -226,7 +226,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
                   style={[
                     styles.cardChip,
                     {
-                      backgroundColor: isDark ? theme.surfaceSecondary : '#F2EDE3',
+                      backgroundColor: theme.surfaceContainer,
                     },
                   ]}
                 >
@@ -241,7 +241,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
                   style={[
                     styles.cardChip,
                     {
-                      backgroundColor: isDark ? theme.surfaceSecondary : '#F2EDE3',
+                      backgroundColor: theme.surfaceContainer,
                     },
                   ]}
                 >
