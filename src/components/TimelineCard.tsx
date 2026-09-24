@@ -130,30 +130,29 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
           onPress={handleCardPress}
           style={styles.cardInner}
         >
-          {/* Main Card Content: Emotion Title + Reflection Note on Left, Time + Character on Right */}
-          <View style={styles.topSection}>
-            <View style={styles.contentColumn}>
+          {/* Arrangement: Header row (Title + Time on left, Illustration on right), Note below */}
+          <View style={styles.headerRow}>
+            <View style={styles.titleBlock}>
               <Text style={[styles.emotionTitle, { color: theme.text }]}>
                 {checkIn.primaryEmotion}
               </Text>
-              {Boolean(noteContent) && (
-                <Text style={[styles.noteText, { color: theme.textSecondary }]}>
-                  {noteContent}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.rightBay}>
               <Text style={[styles.timeText, { color: theme.textMuted }]}>
                 {timeFormatted}
               </Text>
-              <Image
-                source={QUADRANT_HEADSHOTS[checkIn.quadrant] || QUADRANT_HEADSHOTS.green}
-                style={styles.bayIllustration}
-                resizeMode="contain"
-              />
             </View>
+
+            <Image
+              source={QUADRANT_HEADSHOTS[checkIn.quadrant] || QUADRANT_HEADSHOTS.green}
+              style={styles.rightIllustration}
+              resizeMode="contain"
+            />
           </View>
+
+          {Boolean(noteContent) && (
+            <Text style={[styles.noteText, { color: theme.textSecondary }]}>
+              {noteContent}
+            </Text>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -192,43 +191,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   cardInner: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 18,
     position: 'relative',
   },
-  topSection: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
+    justifyContent: 'space-between',
   },
-  contentColumn: {
+  titleBlock: {
     flex: 1,
-    paddingRight: 4,
+    paddingRight: 12,
   },
-  rightBay: {
-    alignItems: 'flex-end',
-    gap: 4,
+  rightIllustration: {
+    width: 68,
+    height: 68,
     flexShrink: 0,
   },
-  bayIllustration: {
-    width: 84,
-    height: 84,
-  },
   emotionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: fonts.bold,
     letterSpacing: -0.2,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   timeText: {
     fontSize: 13,
     fontFamily: fonts.regular,
   },
   noteText: {
+    marginTop: 12,
     fontSize: 14,
     fontFamily: fonts.regular,
     lineHeight: 21,
-    marginBottom: 4,
   },
 });
