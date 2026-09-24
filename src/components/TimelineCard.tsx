@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Animated,
@@ -11,7 +10,7 @@ import {
 } from 'react-native';
 import { CheckIn, QuadrantType } from '../types';
 import { useAppTheme } from '../theme/ThemeContext';
-import { fonts } from '../theme';
+import { AppText } from './ui/AppText';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = -85;
@@ -28,8 +27,6 @@ interface Props {
   onEdit?: (checkIn: CheckIn) => void;
   onDelete: (id: string) => void;
 }
-
-
 
 export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => {
   const { theme } = useAppTheme();
@@ -110,7 +107,9 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
           { backgroundColor: theme.quadrants.red.color, opacity: deleteOpacity },
         ]}
       >
-        <Text style={[styles.deleteBackgroundText, { color: theme.btnPrimaryText }]}>DELETE</Text>
+        <AppText variant="caption" bold color={theme.btnPrimaryText} style={styles.deleteBackgroundText}>
+          DELETE
+        </AppText>
       </Animated.View>
 
       {/* Swipeable Card Foreground */}
@@ -133,12 +132,12 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
           {/* Arrangement: Header row (Title + Time on left, Illustration on right), Note below */}
           <View style={styles.headerRow}>
             <View style={styles.titleBlock}>
-              <Text style={[styles.emotionTitle, { color: theme.text }]}>
+              <AppText variant="heading2" color="primary" style={styles.emotionTitle}>
                 {checkIn.primaryEmotion}
-              </Text>
-              <Text style={[styles.timeText, { color: theme.textMuted }]}>
+              </AppText>
+              <AppText variant="caption" color="muted" style={styles.timeText}>
                 {timeFormatted}
-              </Text>
+              </AppText>
             </View>
 
             <Image
@@ -149,9 +148,9 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
           </View>
 
           {Boolean(noteContent) && (
-            <Text style={[styles.noteText, { color: theme.textSecondary }]}>
+            <AppText variant="bodySmall" color="secondary" style={styles.noteText}>
               {noteContent}
-            </Text>
+            </AppText>
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -178,7 +177,6 @@ const styles = StyleSheet.create({
     paddingRight: 24,
   },
   deleteBackgroundText: {
-    fontWeight: '700',
     fontSize: 12,
     letterSpacing: 1.5,
   },
@@ -210,19 +208,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   emotionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.bold,
     letterSpacing: -0.2,
     marginBottom: 4,
   },
   timeText: {
     fontSize: 13,
-    fontFamily: fonts.regular,
   },
   noteText: {
     marginTop: 12,
-    fontSize: 14,
-    fontFamily: fonts.regular,
     lineHeight: 21,
   },
 });

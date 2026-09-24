@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   ScrollView,
   TouchableOpacity,
@@ -25,6 +24,7 @@ import { TimelineCard } from './src/components/TimelineCard';
 import { MicroCheckInModal } from './src/components/MicroCheckInModal';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeContext';
 import { fonts } from './src/theme';
+import { AppText, AppButton } from './src/components/ui';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -196,12 +196,12 @@ function MainApp() {
       <View style={styles.masthead}>
         <View style={styles.headerRow}>
           <View style={styles.headerTextGroup}>
-            <Text style={[styles.dateKicker, { color: theme.textMuted }]}>
+            <AppText variant="label" bold color="muted" style={styles.dateKicker}>
               {dateKicker}
-            </Text>
-            <Text style={[styles.greetingText, { color: theme.text }]}>
+            </AppText>
+            <AppText variant="hero" color="primary" style={styles.greetingText}>
               {greeting}
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -222,22 +222,19 @@ function MainApp() {
                   style={[
                     styles.weekDayCircle,
                     isSelected && {
-                      backgroundColor: '#F5EAD4',
+                      backgroundColor: theme.surfaceContainer,
                       borderRadius: 9999,
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.weekDayLetter,
-                      {
-                        color: isSelected ? theme.text : theme.textMuted,
-                        fontFamily: isSelected ? fonts.bold : fonts.medium,
-                      },
-                    ]}
+                  <AppText
+                    variant="caption"
+                    bold={isSelected}
+                    color={isSelected ? 'primary' : 'muted'}
+                    style={styles.weekDayLetter}
                   >
                     {DAY_LETTERS[idx]}
-                  </Text>
+                  </AppText>
                 </View>
                 <View
                   style={[
@@ -245,7 +242,7 @@ function MainApp() {
                     {
                       backgroundColor: moodQuadrant
                         ? theme.quadrants[moodQuadrant].color
-                        : 'rgba(0, 0, 0, 0.12)',
+                        : theme.border,
                     },
                   ]}
                 />
@@ -282,20 +279,22 @@ function MainApp() {
             <View style={styles.zeroStateContainer}>
               <TouchableOpacity
                 onPress={handleOpenNewCheckIn}
-                style={[styles.radiantBigBtn, { backgroundColor: theme.btnPrimaryBg }]}
+                style={[styles.radiantBigBtn, { backgroundColor: theme.btnPrimaryBg, shadowColor: theme.btnPrimaryBg }]}
                 activeOpacity={0.88}
               >
-                <MaterialIcons name="add" size={44} color="#FFFFFF" style={styles.radiantPlusIcon} />
-                <Text style={styles.radiantBtnText}>Add entry</Text>
+                <MaterialIcons name="add" size={44} color={theme.btnPrimaryText} style={styles.radiantPlusIcon} />
+                <AppText variant="body" bold color={theme.btnPrimaryText} style={styles.radiantBtnText}>
+                  Add entry
+                </AppText>
               </TouchableOpacity>
             </View>
           ) : (
             /* Screen 3: Today's Entries State */
             <View style={styles.entriesContainer}>
               {/* Entries List Header */}
-              <Text style={[styles.entriesSectionTitle, { color: theme.text }]}>
+              <AppText variant="heading2" color="primary" style={styles.entriesSectionTitle}>
                 Entries
-              </Text>
+              </AppText>
 
               {/* Timeline Cards */}
               <View style={styles.timelineList}>
@@ -319,22 +318,21 @@ function MainApp() {
           style={[
             styles.bottomFloatingContainer,
             {
-              backgroundColor: 'rgba(254, 249, 238, 0.94)',
+              backgroundColor: theme.background,
             },
           ]}
         >
-          <TouchableOpacity
+          <AppButton
+            title="Add entry"
+            variant="primary"
+            icon={<MaterialIcons name="add" size={22} color={theme.btnPrimaryText} />}
+            iconPosition="left"
             onPress={handleOpenNewCheckIn}
-            style={[styles.bottomPillBtn, { backgroundColor: theme.btnPrimaryBg }]}
-            activeOpacity={0.88}
-          >
-            <MaterialIcons name="add" size={22} color="#FFFFFF" style={styles.bottomPlusIcon} />
-            <Text style={styles.bottomPillBtnText}>Add entry</Text>
-          </TouchableOpacity>
+          />
         </View>
       )}
 
-      {/* Micro Check-In Modal (4-Step Flow) */}
+      {/* Micro Check-In Modal (5-Step Flow) */}
       <MicroCheckInModal
         visible={isCheckInModalVisible}
         onClose={handleCloseCheckInModal}
@@ -386,14 +384,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateKicker: {
-    fontSize: 11,
-    fontFamily: fonts.bold,
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   greetingText: {
-    fontSize: 28,
-    fontFamily: fonts.extraBold,
     letterSpacing: -0.5,
   },
   weekRibbon: {
@@ -455,7 +449,6 @@ const styles = StyleSheet.create({
     borderRadius: 105,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#F57C00',
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.38,
     shadowRadius: 36,
@@ -465,9 +458,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   radiantBtnText: {
-    color: '#FFFFFF',
     fontSize: 16,
-    fontFamily: fonts.bold,
     letterSpacing: 0.1,
     includeFontPadding: false,
     textAlign: 'center',
@@ -477,8 +468,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   entriesSectionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.bold,
     letterSpacing: -0.2,
     marginBottom: 12,
   },
@@ -493,29 +482,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 24,
-  },
-  bottomPillBtn: {
-    height: 56,
-    borderRadius: 9999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F57C00',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  bottomPlusIcon: {
-    marginRight: 6,
-  },
-  bottomPillBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    letterSpacing: 0.2,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 22,
   },
 });

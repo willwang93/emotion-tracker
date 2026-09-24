@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -19,6 +18,9 @@ import { CheckIn, QuadrantType } from '../types';
 import { EMOTIONS } from '../constants/moodMeter';
 import { useAppTheme } from '../theme/ThemeContext';
 import { fonts } from '../theme';
+import { AppText } from './ui/AppText';
+import { AppChip } from './ui/AppChip';
+import { AppButton } from './ui/AppButton';
 
 interface Props {
   visible: boolean;
@@ -47,47 +49,11 @@ const PLACE_OPTIONS: { name: string; icon: keyof typeof MaterialIcons.glyphMap }
   { name: 'Cafe/Restaurant', icon: 'local-cafe' },
 ];
 
-const getQuadrantTokens = (q: QuadrantType | null) => {
-  switch (q) {
-    case 'yellow':
-      return {
-        selectedBg: '#FDE68A',
-        selectedBorder: '#D97706',
-        selectedText: '#78350F',
-        selectedIcon: '#B45309',
-      };
-    case 'red':
-      return {
-        selectedBg: '#FECACA',
-        selectedBorder: '#DC2626',
-        selectedText: '#7F1D1D',
-        selectedIcon: '#B91C1C',
-      };
-    case 'blue':
-      return {
-        selectedBg: '#BFDBFE',
-        selectedBorder: '#2563EB',
-        selectedText: '#1E3A8A',
-        selectedIcon: '#1D4ED8',
-      };
-    case 'green':
-    default:
-      return {
-        selectedBg: '#A7F3D0',
-        selectedBorder: '#16A34A',
-        selectedText: '#064E3B',
-        selectedIcon: '#047857',
-      };
-  }
-};
-
 const QUADRANT_CONFIGS: {
   key: QuadrantType;
   icon: keyof typeof MaterialIcons.glyphMap;
   energyText: string;
   pleasantText: string;
-  pleasantColor: string;
-  borderColor: string;
   image: any;
   imageScale?: number;
   blobBorderRadius: {
@@ -102,8 +68,6 @@ const QUADRANT_CONFIGS: {
     icon: 'air',
     energyText: 'High Energy',
     pleasantText: 'Unpleasant',
-    pleasantColor: '#BA1A1A',
-    borderColor: '#BA1A1A',
     image: require('../../assets/blobs/blob_high_unpleasant.png'),
     imageScale: 1.18,
     blobBorderRadius: {
@@ -118,8 +82,6 @@ const QUADRANT_CONFIGS: {
     icon: 'wb-sunny',
     energyText: 'High Energy',
     pleasantText: 'Pleasant',
-    pleasantColor: '#D97706',
-    borderColor: '#F57C00',
     image: require('../../assets/blobs/blob_high_pleasant.png'),
     imageScale: 1.48,
     blobBorderRadius: {
@@ -134,8 +96,6 @@ const QUADRANT_CONFIGS: {
     icon: 'bedtime',
     energyText: 'Low Energy',
     pleasantText: 'Unpleasant',
-    pleasantColor: '#194BE2',
-    borderColor: '#194BE2',
     image: require('../../assets/blobs/blob_low_unpleasant.png'),
     imageScale: 1.28,
     blobBorderRadius: {
@@ -150,8 +110,6 @@ const QUADRANT_CONFIGS: {
     icon: 'spa',
     energyText: 'Low Energy',
     pleasantText: 'Pleasant',
-    pleasantColor: '#1B6C40',
-    borderColor: '#1B6C40',
     image: require('../../assets/blobs/blob_low_pleasant.png'),
     imageScale: 1.35,
     blobBorderRadius: {
@@ -272,7 +230,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
     onClose();
   };
 
-  const qTokens = getQuadrantTokens(quadrant);
+  const qToken = quadrant ? theme.quadrants[quadrant] : theme.quadrants.green;
   const currentEmotionList = quadrant ? EMOTIONS[quadrant] || [] : [];
   const activeEmotionObj = currentEmotionList.find((e) => e.name === primaryEmotion);
   const currentDefinition =
@@ -336,9 +294,9 @@ export const MicroCheckInModal: React.FC<Props> = ({
             <View style={styles.step2Container}>
               {/* Sticky Top Header Area: Question + Definition Card */}
               <View style={[styles.step2Header, { backgroundColor: theme.background }]}>
-                <Text style={[styles.mainQuestion, { color: theme.text, marginBottom: 14 }]}>
+                <AppText variant="heading1" color="primary" style={[styles.mainQuestion, { marginBottom: 14 }]}>
                   Which word fits best?
-                </Text>
+                </AppText>
 
                 {/* Definition Card stuck to top only when a word is selected */}
                 {primaryEmotion ? (
@@ -347,21 +305,16 @@ export const MicroCheckInModal: React.FC<Props> = ({
                       styles.definitionCard,
                       {
                         backgroundColor: theme.surface,
-                        borderWidth: 0,
+                        shadowColor: theme.shadowColor,
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.defEmotionTitle,
-                        { color: theme.text },
-                      ]}
-                    >
+                    <AppText variant="heading2" color="primary" style={styles.defEmotionTitle}>
                       {primaryEmotion}
-                    </Text>
-                    <Text style={[styles.defEmotionBody, { color: theme.textSecondary }]}>
+                    </AppText>
+                    <AppText variant="body" color="secondary" style={styles.defEmotionBody}>
                       {currentDefinition}
-                    </Text>
+                    </AppText>
                   </View>
                 ) : null}
               </View>
@@ -373,36 +326,15 @@ export const MicroCheckInModal: React.FC<Props> = ({
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.emotionGrid}>
-                  {currentEmotionList.map((item) => {
-                    const isSelected = item.name === primaryEmotion;
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        activeOpacity={0.8}
-                        onPress={() => setPrimaryEmotion(item.name)}
-                        style={[
-                          styles.emotionChip,
-                          {
-                            backgroundColor: isSelected
-                              ? qTokens.selectedBg
-                              : '#FFFFFF',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.emotionChipText,
-                            {
-                              color: isSelected ? qTokens.selectedText : theme.text,
-                              fontFamily: isSelected ? fonts.bold : fonts.semiBold,
-                            },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {currentEmotionList.map((item) => (
+                    <AppChip
+                      key={item.id}
+                      label={item.name}
+                      selected={item.name === primaryEmotion}
+                      quadrant={quadrant}
+                      onPress={() => setPrimaryEmotion(item.name)}
+                    />
+                  ))}
                 </View>
               </ScrollView>
             </View>
@@ -415,15 +347,15 @@ export const MicroCheckInModal: React.FC<Props> = ({
               {/* STEP 1: Mood Meter (Screen 2) */}
               {currentStep === 1 && (
                 <View style={styles.stepContainer}>
-                  <Text style={[styles.mainQuestion, { color: theme.text }]}>
+                  <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
                     How are you feeling right now?
-                  </Text>
+                  </AppText>
 
                   <View style={styles.quadrantGrid}>
                     {QUADRANT_CONFIGS.map((cfg) => {
                       const isSelected = quadrant === cfg.key;
-                      const borderColor = cfg.borderColor;
-                      const pleasantColor = cfg.pleasantColor;
+                      const borderColor = theme.quadrants[cfg.key].color;
+                      const pleasantColor = theme.quadrants[cfg.key].textColor;
 
                       return (
                         <TouchableOpacity
@@ -460,22 +392,21 @@ export const MicroCheckInModal: React.FC<Props> = ({
 
                           {/* Labels: Pleasant indicator and Energy */}
                           <View style={styles.blobLabelsContainer}>
-                            <Text
-                              style={[
-                                styles.blobPleasantText,
-                                { color: pleasantColor },
-                              ]}
+                            <AppText
+                              variant="label"
+                              bold
+                              color={pleasantColor}
+                              style={styles.blobPleasantText}
                             >
                               {cfg.pleasantText}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.blobEnergyText,
-                                { color: theme.text },
-                              ]}
+                            </AppText>
+                            <AppText
+                              variant="heading2"
+                              color="primary"
+                              style={styles.blobEnergyText}
                             >
                               {cfg.energyText}
-                            </Text>
+                            </AppText>
                           </View>
                         </TouchableOpacity>
                       );
@@ -487,79 +418,41 @@ export const MicroCheckInModal: React.FC<Props> = ({
             {/* STEP 3: Emotion Intensity */}
             {currentStep === 3 && (
               <View style={styles.stepContainer}>
-                <Text style={[styles.mainQuestion, { color: theme.text }]}>
+                <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
                   How intense is this feeling?
-                </Text>
+                </AppText>
 
                 <View style={styles.intensityPillsContainer}>
-                  <View style={styles.intensityPillsRow}>
-                    {[1, 2, 3, 4, 5].map((num) => {
-                      const isSelected = intensity === num;
-                      return (
-                        <TouchableOpacity
-                          key={`int-${num}`}
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            setIntensity(num);
-                          }}
-                          style={[
-                            styles.intensityPillBtn,
-                            {
-                              backgroundColor: isSelected
-                                ? qTokens.selectedBg
-                                : '#FFFFFF',
-                            },
-                          ]}
-                        >
-                          <Text
+                  {[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]].map((row, rowIdx) => (
+                    <View key={`intensity-row-${rowIdx}`} style={styles.intensityPillsRow}>
+                      {row.map((num) => {
+                        const isSelected = intensity === num;
+                        return (
+                          <TouchableOpacity
+                            key={`int-${num}`}
+                            activeOpacity={0.8}
+                            onPress={() => setIntensity(num)}
                             style={[
-                              styles.intensityPillBtnText,
+                              styles.intensityPillBtn,
                               {
-                                color: isSelected ? qTokens.selectedText : theme.text,
-                                fontFamily: isSelected ? fonts.bold : fonts.semiBold,
+                                backgroundColor: isSelected ? qToken.selectedChipBg : theme.surface,
+                                shadowColor: theme.shadowColor,
                               },
                             ]}
                           >
-                            {num}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                  <View style={styles.intensityPillsRow}>
-                    {[6, 7, 8, 9, 10].map((num) => {
-                      const isSelected = intensity === num;
-                      return (
-                        <TouchableOpacity
-                          key={`int-${num}`}
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            setIntensity(num);
-                          }}
-                          style={[
-                            styles.intensityPillBtn,
-                            {
-                              backgroundColor: isSelected
-                                ? qTokens.selectedBg
-                                : '#FFFFFF',
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.intensityPillBtnText,
-                              {
-                                color: isSelected ? qTokens.selectedText : theme.text,
-                                fontFamily: isSelected ? fonts.bold : fonts.semiBold,
-                              },
-                            ]}
-                          >
-                            {num}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                            <AppText
+                              variant="body"
+                              bold={isSelected}
+                              color={isSelected ? qToken.selectedChipText : theme.text}
+                              style={styles.intensityPillBtnText}
+                            >
+                              {num}
+                            </AppText>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ))}
                 </View>
               </View>
             )}
@@ -567,111 +460,59 @@ export const MicroCheckInModal: React.FC<Props> = ({
             {/* STEP 4: What's Contributing (Screen 5) */}
             {currentStep === 4 && (
               <View style={styles.stepContainer}>
-                <Text style={[styles.mainQuestion, { color: theme.text }]}>
+                <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
                   What's contributing?
-                </Text>
+                </AppText>
 
                 {/* People Section (Single select, dynamic quadrant color, no checkmark) */}
-                <Text style={[styles.sectionHeading, { color: theme.textSecondary }]}>
+                <AppText variant="caption" bold color="secondary" style={styles.sectionHeading}>
                   People
-                </Text>
+                </AppText>
                 <View style={styles.contributingChipsRow}>
-                  {PEOPLE_OPTIONS.map((item) => {
-                    const isSelected = selectedPerson === item.name;
-                    return (
-                      <TouchableOpacity
-                        key={`person-${item.name}`}
-                        activeOpacity={0.8}
-                        onPress={() => togglePerson(item.name)}
-                        style={[
-                          styles.contributingChip,
-                          {
-                            backgroundColor: isSelected
-                              ? qTokens.selectedBg
-                              : '#FFFFFF',
-                          },
-                        ]}
-                      >
+                  {PEOPLE_OPTIONS.map((item) => (
+                    <AppChip
+                      key={`person-${item.name}`}
+                      label={item.name}
+                      selected={selectedPerson === item.name}
+                      quadrant={quadrant}
+                      onPress={() => togglePerson(item.name)}
+                      icon={
                         <MaterialIcons
                           name={item.icon}
                           size={18}
-                          color={
-                            isSelected
-                              ? qTokens.selectedIcon
-                              : theme.textSecondary
-                          }
-                          style={styles.chipIconSpacing}
+                          color={selectedPerson === item.name ? qToken.selectedIcon : theme.textSecondary}
                         />
-                        <Text
-                          style={[
-                            styles.contributingChipText,
-                            {
-                              color: isSelected
-                                ? qTokens.selectedText
-                                : theme.text,
-                              fontFamily: isSelected ? fonts.bold : fonts.semiBold,
-                            },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                      }
+                    />
+                  ))}
                 </View>
 
                 {/* Place Section (Single select, dynamic quadrant color, no checkmark) */}
-                <Text
-                  style={[
-                    styles.sectionHeading,
-                    { color: theme.textSecondary, marginTop: 24 },
-                  ]}
+                <AppText
+                  variant="caption"
+                  bold
+                  color="secondary"
+                  style={[styles.sectionHeading, { marginTop: 24 }]}
                 >
                   Place
-                </Text>
+                </AppText>
                 <View style={styles.contributingChipsRow}>
-                  {PLACE_OPTIONS.map((item) => {
-                    const isSelected = selectedPlace === item.name;
-                    return (
-                      <TouchableOpacity
-                        key={`place-${item.name}`}
-                        activeOpacity={0.8}
-                        onPress={() => togglePlace(item.name)}
-                        style={[
-                          styles.contributingChip,
-                          {
-                            backgroundColor: isSelected
-                              ? qTokens.selectedBg
-                              : '#FFFFFF',
-                          },
-                        ]}
-                      >
+                  {PLACE_OPTIONS.map((item) => (
+                    <AppChip
+                      key={`place-${item.name}`}
+                      label={item.name}
+                      selected={selectedPlace === item.name}
+                      quadrant={quadrant}
+                      onPress={() => togglePlace(item.name)}
+                      icon={
                         <MaterialIcons
                           name={item.icon}
                           size={18}
-                          color={
-                            isSelected
-                              ? qTokens.selectedIcon
-                              : theme.textSecondary
-                          }
-                          style={styles.chipIconSpacing}
+                          color={selectedPlace === item.name ? qToken.selectedIcon : theme.textSecondary}
                         />
-                        <Text
-                          style={[
-                            styles.contributingChipText,
-                            {
-                              color: isSelected
-                                ? qTokens.selectedText
-                                : theme.text,
-                              fontFamily: isSelected ? fonts.bold : fonts.semiBold,
-                            },
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                      }
+                    />
+                  ))}
                 </View>
               </View>
             )}
@@ -679,15 +520,15 @@ export const MicroCheckInModal: React.FC<Props> = ({
             {/* STEP 5: Reflection Note (Screen 6) */}
             {currentStep === 5 && (
               <View style={styles.stepContainer}>
-                <Text style={[styles.mainQuestion, { color: theme.text }]}>
+                <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
                   What is causing this emotion?
-                </Text>
+                </AppText>
 
                 <View
                   style={[
                     styles.textareaCard,
                     {
-                      backgroundColor: '#FFF5E4',
+                      backgroundColor: theme.inputBg,
                       borderColor: theme.border,
                     },
                   ]}
@@ -708,24 +549,14 @@ export const MicroCheckInModal: React.FC<Props> = ({
           </ScrollView>
           )}
 
-          {/* Bottom Fixed Action Button matching Stitch Orange CTA */}
+          {/* Bottom Fixed Action Button using AppButton */}
           <View style={[styles.bottomBar, { backgroundColor: theme.background }]}>
-            <TouchableOpacity
-              onPress={nextStep}
+            <AppButton
+              title={getNextBtnText()}
+              variant="primary"
               disabled={!canProceed}
-              style={[
-                styles.primaryActionBtn,
-                {
-                  backgroundColor: theme.btnPrimaryBg,
-                  opacity: canProceed ? 1 : 0.45,
-                },
-              ]}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.primaryActionBtnText}>
-                {getNextBtnText()}
-              </Text>
-            </TouchableOpacity>
+              onPress={nextStep}
+            />
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -766,7 +597,6 @@ const styles = StyleSheet.create({
   },
   mainQuestion: {
     fontSize: 26,
-    fontFamily: fonts.bold,
     letterSpacing: -0.5,
     lineHeight: 32,
     marginBottom: 24,
@@ -805,16 +635,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   blobPleasantText: {
-    fontSize: 11,
-    fontFamily: fonts.bold,
-    textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 2,
     textAlign: 'center',
   },
   blobEnergyText: {
     fontSize: 16,
-    fontFamily: fonts.bold,
     lineHeight: 20,
     textAlign: 'center',
   },
@@ -841,20 +667,15 @@ const styles = StyleSheet.create({
     minHeight: 124,
     justifyContent: 'flex-start',
     marginBottom: 8,
-    shadowColor: '#BD8948',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 12,
     elevation: 2,
   },
   defEmotionTitle: {
-    fontSize: 18,
-    fontFamily: fonts.bold,
     marginBottom: 6,
   },
   defEmotionBody: {
-    fontSize: 14,
-    fontFamily: fonts.regular,
     lineHeight: 22,
   },
   emotionGrid: {
@@ -862,46 +683,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  emotionChip: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 9999,
-    shadowColor: '#BD8948',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1.5,
-  },
-  emotionChipText: {
-    fontSize: 15,
-  },
   sectionHeading: {
-    fontSize: 14,
-    fontFamily: fonts.bold,
     marginBottom: 12,
   },
   contributingChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-  },
-  contributingChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 9999,
-    shadowColor: '#BD8948',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1.5,
-  },
-  chipIconSpacing: {
-    marginRight: 8,
-  },
-  contributingChipText: {
-    fontSize: 14,
   },
   textareaCard: {
     borderRadius: 20,
@@ -926,23 +714,6 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 24,
   },
-  primaryActionBtn: {
-    height: 56,
-    borderRadius: 9999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F57C00',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-  primaryActionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    letterSpacing: 0.2,
-  },
   intensityPillsContainer: {
     width: '100%',
     gap: 12,
@@ -960,7 +731,6 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#BD8948',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
@@ -968,6 +738,5 @@ const styles = StyleSheet.create({
   },
   intensityPillBtnText: {
     fontSize: 17,
-    fontFamily: fonts.semiBold,
   },
 });

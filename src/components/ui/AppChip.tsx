@@ -27,16 +27,16 @@ export const AppChip: React.FC<AppChipProps> = ({
 }) => {
   const { theme } = useAppTheme();
 
-  let bgColor = '#FFFFFF';
+  let bgColor = theme.surface;
   let textColor = theme.text;
-  let borderColor = theme.borderMuted;
+  let borderColor = 'transparent';
 
   if (selected) {
     if (quadrant) {
       const qToken = theme.quadrants[quadrant];
       bgColor = qToken.selectedChipBg;
       textColor = qToken.selectedChipText;
-      borderColor = qToken.selectedChipBorder === 'transparent' ? 'transparent' : qToken.selectedChipBorder;
+      borderColor = 'transparent';
     } else {
       bgColor = theme.btnPrimaryBg;
       textColor = theme.btnPrimaryText;
@@ -59,6 +59,7 @@ export const AppChip: React.FC<AppChipProps> = ({
           borderColor,
           paddingVertical,
           paddingHorizontal,
+          shadowColor: theme.shadowColor,
         },
         style,
       ]}
@@ -83,6 +84,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 1.5,
   },
   iconContainer: {
     marginRight: 6,

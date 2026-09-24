@@ -10,6 +10,7 @@ export interface QuadrantColorSet {
   selectedChipBg: string;
   selectedChipBorder: string;
   selectedChipText: string;
+  selectedIcon: string;
   glow: string;
   activeBorder: string;
 }
@@ -91,9 +92,10 @@ export const lightTheme: ThemeColors = {
       cardBorder: '#FDE68A',
       textColor: '#964900',
       subTextColor: '#B45309',
-      selectedChipBg: '#F57C00',
-      selectedChipBorder: 'transparent',
-      selectedChipText: '#FFFFFF',
+      selectedChipBg: '#FDE68A',
+      selectedChipBorder: '#D97706',
+      selectedChipText: '#78350F',
+      selectedIcon: '#B45309',
       glow: 'rgba(245, 124, 0, 0.25)',
       activeBorder: '#F57C00',
     },
@@ -104,9 +106,10 @@ export const lightTheme: ThemeColors = {
       cardBorder: '#FECDD3',
       textColor: '#BA1A1A',
       subTextColor: '#E11D48',
-      selectedChipBg: '#EF4444',
-      selectedChipBorder: 'transparent',
-      selectedChipText: '#FFFFFF',
+      selectedChipBg: '#FECACA',
+      selectedChipBorder: '#DC2626',
+      selectedChipText: '#7F1D1D',
+      selectedIcon: '#B91C1C',
       glow: 'rgba(239, 68, 68, 0.25)',
       activeBorder: '#EF4444',
     },
@@ -117,9 +120,10 @@ export const lightTheme: ThemeColors = {
       cardBorder: '#A7F3D0',
       textColor: '#1B6C40',
       subTextColor: '#047857',
-      selectedChipBg: '#61AD7B',
-      selectedChipBorder: 'transparent',
-      selectedChipText: '#FFFFFF',
+      selectedChipBg: '#A7F3D0',
+      selectedChipBorder: '#16A34A',
+      selectedChipText: '#064E3B',
+      selectedIcon: '#047857',
       glow: 'rgba(97, 173, 123, 0.25)',
       activeBorder: '#61AD7B',
     },
@@ -130,14 +134,13 @@ export const lightTheme: ThemeColors = {
       cardBorder: '#BFDBFE',
       textColor: '#194BE2',
       subTextColor: '#2563EB',
-      selectedChipBg: '#3E66FB',
-      selectedChipBorder: 'transparent',
-      selectedChipText: '#FFFFFF',
+      selectedChipBg: '#BFDBFE',
+      selectedChipBorder: '#2563EB',
+      selectedChipText: '#1E3A8A',
+      selectedIcon: '#1D4ED8',
       glow: 'rgba(62, 102, 251, 0.25)',
       activeBorder: '#3E66FB',
     },
   },
 };
-
-export const theme: ThemeColors = lightTheme;
 

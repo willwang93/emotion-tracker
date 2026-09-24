@@ -10,14 +10,14 @@ Inspired by the Yale Center for Emotional Intelligence's Mood Meter (*How We Fee
 
 * **Yale Mood Meter Taxonomy:**
   * 4 Quadrants: High/Low Energy × Pleasant/Unpleasant (Red, Yellow, Blue, Green).
-  * 48 granular emotion words complete with definitions (e.g., *Anxious, Enraged, Exuberant, Serene, Melancholy, Peaceful*).
-* **Somatic & Contextual Awareness:**
-  * Quick-select body sensations (chest tightness, clenched jaw, racing heart, relaxed, warm, etc.).
-  * Context tagging (*Who:* Alone, Partner, Coworker, Friend, Family; *Where:* Home, Office, Transit, Outdoors).
+  * 144 granular emotion words complete with definitions (36 emotions per quadrant across *Anxious, Joyful, Serene, Melancholy, Peaceful*, and more).
+* **Contextual & Intensity Awareness:**
+  * Emotion intensity rating (1–10 scale).
+  * Context tagging (*Who:* Alone, Friends, Family, Partner, Coworkers, Classmates, Clients; *Where:* Home, Work, School, Transit, Outdoors, Gym, Cafe/Restaurant).
 * **Literary Editorial Design:**
   * Minimalist, magazine-inspired aesthetic with Plus Jakarta Sans typography and clean layouts.
   * Warm editorial cream aesthetic (`#FEF9EE`) with Yale Mood Meter quadrant accent colors.
-  * Chronological journal timeline displaying quote reflections, emotion badges, and somatic markers.
+  * Chronological journal timeline displaying quote reflections, emotion badges, and organic illustrations.
 * **100% Private & Offline-First:**
   * All check-ins and reflections are stored strictly on-device in a local SQLite database (`emotion_tracker.db`).
   * Zero third-party telemetry, tracking, or cloud dependencies. Your emotional life remains entirely on your device.
@@ -73,10 +73,11 @@ npx tsc --noEmit
 ├── app.json                 # Expo project configuration & native Android permissions
 ├── src/
 │   ├── components/          # UI Components
-│   │   ├── MicroCheckInModal.tsx  # Multi-step check-in wizard (Mood Meter -> Nuance -> Context -> Intensity -> Note)
-│   │   └── TimelineCard.tsx       # Editorial journal cards with emotion badges & notes
+│   │   ├── MicroCheckInModal.tsx  # Multi-step check-in wizard (Mood Meter -> Nuance -> Intensity -> Context -> Note)
+│   │   ├── TimelineCard.tsx       # Editorial journal cards with emotion badges & notes
+│   │   └── ui/              # Token-locked design primitives (AppText, AppButton, AppCard, AppChip, AppTextInput, AppModalLayout)
 │   ├── constants/
-│   │   └── moodMeter.ts     # Yale Mood Meter taxonomy (48 emotions with granular definitions)
+│   │   └── moodMeter.ts     # Yale Mood Meter taxonomy (144 emotions with granular definitions)
 │   ├── services/
 │   │   └── db.ts            # expo-sqlite initialization, CRUD queries, database migrations
 │   ├── theme/
