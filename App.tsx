@@ -22,6 +22,7 @@ import {
 } from './src/services/db';
 import { TimelineCard } from './src/components/TimelineCard';
 import { MicroCheckInModal } from './src/components/MicroCheckInModal';
+import { ExportModal } from './src/components/ExportModal';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeContext';
 import { fonts } from './src/theme';
 import { AppText, AppButton } from './src/components/ui';
@@ -58,6 +59,7 @@ function MainApp() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isCheckInModalVisible, setIsCheckInModalVisible] = useState<boolean>(false);
+  const [isExportModalVisible, setIsExportModalVisible] = useState<boolean>(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
 
   const weekDays = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
@@ -203,6 +205,20 @@ function MainApp() {
               {greeting}
             </AppText>
           </View>
+          <TouchableOpacity
+            style={[
+              styles.exportIconBtn,
+              {
+                backgroundColor: theme.surfaceContainer,
+                borderColor: theme.border,
+              },
+            ]}
+            onPress={() => setIsExportModalVisible(true)}
+            activeOpacity={0.7}
+            accessibilityLabel="Export entries"
+          >
+            <MaterialIcons name="ios-share" size={20} color={theme.text} />
+          </TouchableOpacity>
         </View>
 
         {/* 7-Day Weightless Week Ribbon */}
@@ -339,6 +355,12 @@ function MainApp() {
         onSave={handleSaveCheckIn}
         initialCheckIn={editingCheckIn}
       />
+
+      {/* Export Modal */}
+      <ExportModal
+        visible={isExportModalVisible}
+        onClose={() => setIsExportModalVisible(false)}
+      />
     </View>
   );
 }
@@ -382,6 +404,15 @@ const styles = StyleSheet.create({
   },
   headerTextGroup: {
     flex: 1,
+  },
+  exportIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
   },
   dateKicker: {
     letterSpacing: 1.5,

@@ -189,6 +189,21 @@ export async function getCheckInsForDateRange(startDate: Date, endDate: Date): P
   });
 }
 
+export async function getAllCheckIns(): Promise<CheckIn[]> {
+  return withDb(async (db) => {
+    const rows = await db.getAllAsync<any>(
+      `SELECT * FROM check_ins ORDER BY timestamp ASC;`
+    );
+    return rows.map(mapRowToCheckIn);
+  });
+}
+
+export async function getCheckInsForMonth(year: number, monthIndex: number): Promise<CheckIn[]> {
+  const startDate = new Date(year, monthIndex, 1);
+  const endDate = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+  return getCheckInsForDateRange(startDate, endDate);
+}
+
 export async function deleteCheckIn(id: string): Promise<void> {
   return withDb(async (db) => {
     await db.runAsync(`DELETE FROM check_ins WHERE id = ?;`, [id]);
