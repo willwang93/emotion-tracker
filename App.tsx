@@ -13,7 +13,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { CheckIn, QuadrantType } from './src/types';
 import {
-  getDatabase,
   getCheckInsForDay,
   getCheckInsForDateRange,
   insertCheckIn,
@@ -66,7 +65,6 @@ function MainApp() {
 
   const loadData = useCallback(async (date: Date) => {
     try {
-      await getDatabase();
       const entries = await getCheckInsForDay(date);
       setCheckIns(entries);
 
