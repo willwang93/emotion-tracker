@@ -27,26 +27,69 @@ import { fonts } from './src/theme';
 import { AppText, AppButton } from './src/components/ui';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const DAYS_IN_WEEK = 7;
+const MORNING_END_HOUR = 12;
+const AFTERNOON_END_HOUR = 17;
+const QUADRANTS_LIST: QuadrantType[] = ['yellow', 'red', 'green', 'blue'];
 
-function getWeekDates(date: Date): Date[] {
+export function getWeekDates(date: Date): Date[] {
   const d = new Date(date);
   const day = d.getDay();
   // 0 is Sunday, 1 is Monday ... 6 is Saturday
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d.getFullYear(), d.getMonth(), diff);
   const days: Date[] = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < DAYS_IN_WEEK; i++) {
     const next = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
     days.push(next);
   }
   return days;
 }
 
-function getGreeting(date: Date): string {
+export function getGreeting(date: Date): string {
   const hour = date.getHours();
-  if (hour < 12) return 'Good morning, Will';
-  if (hour < 17) return 'Good afternoon, Will';
+  if (hour < MORNING_END_HOUR) return 'Good morning, Will';
+  if (hour < AFTERNOON_END_HOUR) return 'Good afternoon, Will';
   return 'Good evening, Will';
+}
+
+export function computeWeekMoodMap(weekEntries: CheckIn[]): Record<string, QuadrantType> {
+  // Group check-ins by day string
+  const dayEntriesMap: Record<string, CheckIn[]> = {};
+  for (const item of weekEntries) {
+    const itemDateStr = new Date(item.timestamp).toDateString();
+    if (!dayEntriesMap[itemDateStr]) {
+      dayEntriesMap[itemDateStr] = [];
+    }
+    dayEntriesMap[itemDateStr].push(item);
+  }
+
+  // Find the most frequent mood for each day (tie-breaker: most recent entry, at index 0)
+  const moodMap: Record<string, QuadrantType> = {};
+  for (const [dayDateStr, entries] of Object.entries(dayEntriesMap)) {
+    if (entries.length === 0) continue;
+    const counts: Record<QuadrantType, number> = {
+      yellow: 0,
+      red: 0,
+      green: 0,
+      blue: 0,
+    };
+    for (const entry of entries) {
+      counts[entry.quadrant] = (counts[entry.quadrant] || 0) + 1;
+    }
+
+    let dominantQuadrant: QuadrantType = entries[0].quadrant;
+    let maxCount = counts[dominantQuadrant];
+
+    for (const quad of QUADRANTS_LIST) {
+      if (counts[quad] > maxCount) {
+        maxCount = counts[quad];
+        dominantQuadrant = quad;
+      }
+    }
+    moodMap[dayDateStr] = dominantQuadrant;
+  }
+  return moodMap;
 }
 
 function MainApp() {
@@ -72,42 +115,7 @@ function MainApp() {
       const currentWeek = getWeekDates(date);
       const weekEntries = await getCheckInsForDateRange(currentWeek[0], currentWeek[6]);
 
-      // Group check-ins by day string
-      const dayEntriesMap: Record<string, CheckIn[]> = {};
-      for (const item of weekEntries) {
-        const itemDateStr = new Date(item.timestamp).toDateString();
-        if (!dayEntriesMap[itemDateStr]) {
-          dayEntriesMap[itemDateStr] = [];
-        }
-        dayEntriesMap[itemDateStr].push(item);
-      }
-
-      // Find the most frequent mood for each day
-      const moodMap: Record<string, QuadrantType> = {};
-      for (const [dayDateStr, entries] of Object.entries(dayEntriesMap)) {
-        if (entries.length === 0) continue;
-        const counts: Record<QuadrantType, number> = {
-          yellow: 0,
-          red: 0,
-          green: 0,
-          blue: 0,
-        };
-        for (const entry of entries) {
-          counts[entry.quadrant] = (counts[entry.quadrant] || 0) + 1;
-        }
-
-        let dominantQuadrant: QuadrantType = entries[entries.length - 1].quadrant;
-        let maxCount = counts[dominantQuadrant];
-
-        for (const quad of (['yellow', 'red', 'green', 'blue'] as QuadrantType[])) {
-          if (counts[quad] > maxCount) {
-            maxCount = counts[quad];
-            dominantQuadrant = quad;
-          }
-        }
-        moodMap[dayDateStr] = dominantQuadrant;
-      }
-      setWeekMoodMap(moodMap);
+      setWeekMoodMap(computeWeekMoodMap(weekEntries));
     } catch (err) {
       console.error('Failed to load check-ins:', err);
     } finally {

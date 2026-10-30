@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   BackHandler,
@@ -21,6 +20,7 @@ import { fonts } from '../theme';
 import { AppText } from './ui/AppText';
 import { AppChip } from './ui/AppChip';
 import { AppButton } from './ui/AppButton';
+import { AppTextInput } from './ui/AppTextInput';
 
 interface Props {
   visible: boolean;
@@ -121,6 +121,91 @@ const QUADRANT_CONFIGS: {
   },
 ];
 
+export const DEFAULT_INTENSITY = 7;
+export const HIGH_QUADRANT_SCORE = 8;
+export const LOW_QUADRANT_SCORE = 3;
+export const DEFAULT_QUADRANT: QuadrantType = 'green';
+export const DEFAULT_EMOTION = 'Calm';
+export const INTENSITY_ROWS: number[][] = [
+  [1, 2, 3, 4, 5],
+  [6, 7, 8, 9, 10],
+];
+
+export interface CheckInFormState {
+  quadrant: QuadrantType | null;
+  primaryEmotion: string | null;
+  intensity: number;
+  selectedPerson: string | null;
+  selectedPlace: string | null;
+  reflectionNote: string;
+}
+
+export function deriveInitialFormState(initialCheckIn?: CheckIn | null): CheckInFormState {
+  if (!initialCheckIn) {
+    return {
+      quadrant: null,
+      primaryEmotion: null,
+      intensity: DEFAULT_INTENSITY,
+      selectedPerson: null,
+      selectedPlace: null,
+      reflectionNote: '',
+    };
+  }
+  return {
+    quadrant: initialCheckIn.quadrant,
+    primaryEmotion: initialCheckIn.primaryEmotion,
+    intensity: initialCheckIn.intensity ?? DEFAULT_INTENSITY,
+    selectedPerson: initialCheckIn.contextWho?.[0] || null,
+    selectedPlace:
+      initialCheckIn.contextWhat?.[0] || initialCheckIn.contextWhere || null,
+    reflectionNote: initialCheckIn.triggerNote || initialCheckIn.urgeNote || '',
+  };
+}
+
+export function canProceedStep(
+  step: 1 | 2 | 3 | 4 | 5,
+  quadrant: QuadrantType | null,
+  primaryEmotion: string | null
+): boolean {
+  return step === 1
+    ? quadrant !== null
+    : step === 2
+    ? primaryEmotion !== null
+    : true;
+}
+
+export function buildCheckInPayload(
+  form: CheckInFormState,
+  initialCheckIn?: CheckIn | null,
+  now: number = Date.now()
+): CheckIn {
+  const selectedQuad = form.quadrant || DEFAULT_QUADRANT;
+  const fallbackEmotion =
+    form.primaryEmotion || (EMOTIONS[selectedQuad]?.[0]?.name ?? DEFAULT_EMOTION);
+
+  return {
+    id: initialCheckIn ? initialCheckIn.id : now.toString(),
+    timestamp: initialCheckIn ? initialCheckIn.timestamp : now,
+    quadrant: selectedQuad,
+    energyLevel:
+      selectedQuad === 'yellow' || selectedQuad === 'red'
+        ? HIGH_QUADRANT_SCORE
+        : LOW_QUADRANT_SCORE,
+    pleasantnessLevel:
+      selectedQuad === 'yellow' || selectedQuad === 'green'
+        ? HIGH_QUADRANT_SCORE
+        : LOW_QUADRANT_SCORE,
+    primaryEmotion: fallbackEmotion,
+    intensity: form.intensity || DEFAULT_INTENSITY,
+    somaticSensations: initialCheckIn?.somaticSensations || [],
+    contextWho: form.selectedPerson ? [form.selectedPerson] : [],
+    contextWhat: form.selectedPlace ? [form.selectedPlace] : [],
+    contextWhere: form.selectedPlace || '',
+    triggerNote: form.reflectionNote.trim() || undefined,
+    createdAt: initialCheckIn ? initialCheckIn.createdAt : now,
+  };
+}
+
 export const MicroCheckInModal: React.FC<Props> = ({
   visible,
   onClose,
@@ -132,24 +217,19 @@ export const MicroCheckInModal: React.FC<Props> = ({
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [quadrant, setQuadrant] = useState<QuadrantType | null>(null);
   const [primaryEmotion, setPrimaryEmotion] = useState<string | null>(null);
-  const [intensity, setIntensity] = useState<number>(7);
+  const [intensity, setIntensity] = useState<number>(DEFAULT_INTENSITY);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
   const [reflectionNote, setReflectionNote] = useState<string>('');
 
   useEffect(() => {
-    if (initialCheckIn) {
-      setQuadrant(initialCheckIn.quadrant);
-      setPrimaryEmotion(initialCheckIn.primaryEmotion);
-      setIntensity(initialCheckIn.intensity ?? 7);
-      setSelectedPerson(initialCheckIn.contextWho?.[0] || null);
-      setSelectedPlace(
-        initialCheckIn.contextWhat?.[0] || initialCheckIn.contextWhere || null
-      );
-      setReflectionNote(initialCheckIn.triggerNote || initialCheckIn.urgeNote || '');
-    } else {
-      resetForm();
-    }
+    const initial = deriveInitialFormState(initialCheckIn);
+    setQuadrant(initial.quadrant);
+    setPrimaryEmotion(initial.primaryEmotion);
+    setIntensity(initial.intensity);
+    setSelectedPerson(initial.selectedPerson);
+    setSelectedPlace(initial.selectedPlace);
+    setReflectionNote(initial.reflectionNote);
     setCurrentStep(1);
   }, [initialCheckIn, visible]);
 
@@ -166,15 +246,6 @@ export const MicroCheckInModal: React.FC<Props> = ({
     });
     return () => backHandler.remove();
   }, [visible, currentStep]);
-
-  const resetForm = () => {
-    setQuadrant(null);
-    setPrimaryEmotion(null);
-    setIntensity(7);
-    setSelectedPerson(null);
-    setSelectedPlace(null);
-    setReflectionNote('');
-  };
 
   const nextStep = () => {
     if (!canProceed) return;
@@ -207,25 +278,17 @@ export const MicroCheckInModal: React.FC<Props> = ({
   };
 
   const handleComplete = () => {
-    const selectedQuad = quadrant || 'green';
-    const fallbackEmotion =
-      primaryEmotion || (EMOTIONS[selectedQuad]?.[0]?.name ?? 'Calm');
-
-    const checkIn: CheckIn = {
-      id: initialCheckIn ? initialCheckIn.id : Date.now().toString(),
-      timestamp: initialCheckIn ? initialCheckIn.timestamp : Date.now(),
-      quadrant: selectedQuad,
-      energyLevel: selectedQuad === 'yellow' || selectedQuad === 'red' ? 8 : 3,
-      pleasantnessLevel: selectedQuad === 'yellow' || selectedQuad === 'green' ? 8 : 3,
-      primaryEmotion: fallbackEmotion,
-      intensity: intensity || 7,
-      somaticSensations: initialCheckIn?.somaticSensations || [],
-      contextWho: selectedPerson ? [selectedPerson] : [],
-      contextWhat: selectedPlace ? [selectedPlace] : [],
-      contextWhere: selectedPlace || '',
-      triggerNote: reflectionNote.trim() || undefined,
-      createdAt: initialCheckIn ? initialCheckIn.createdAt : Date.now(),
-    };
+    const checkIn = buildCheckInPayload(
+      {
+        quadrant,
+        primaryEmotion,
+        intensity,
+        selectedPerson,
+        selectedPlace,
+        reflectionNote,
+      },
+      initialCheckIn
+    );
     onSave(checkIn);
     onClose();
   };
@@ -237,12 +300,7 @@ export const MicroCheckInModal: React.FC<Props> = ({
     activeEmotionObj?.definition ||
     'Tap an emotion word below to see its nuanced meaning and reflection context.';
 
-  const canProceed =
-    currentStep === 1
-      ? quadrant !== null
-      : currentStep === 2
-      ? primaryEmotion !== null
-      : true;
+  const canProceed = canProceedStep(currentStep, quadrant, primaryEmotion);
 
   const getNextBtnText = () => {
     if (currentStep === 5) {
@@ -250,6 +308,244 @@ export const MicroCheckInModal: React.FC<Props> = ({
     }
     return 'Next';
   };
+
+  const renderStep1QuadrantPicker = () => (
+    <View style={styles.stepContainer}>
+      <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
+        How are you feeling right now?
+      </AppText>
+
+      <View style={styles.quadrantGrid}>
+        {QUADRANT_CONFIGS.map((cfg) => {
+          const isSelected = quadrant === cfg.key;
+          const borderColor = theme.quadrants[cfg.key].color;
+          const pleasantColor = theme.quadrants[cfg.key].textColor;
+
+          return (
+            <TouchableOpacity
+              key={cfg.key}
+              activeOpacity={0.88}
+              onPress={() => {
+                handlePickQuadrant(cfg.key);
+              }}
+              style={styles.blobCardWrapper}
+            >
+              {/* Illustration Frame Container (Blob background removed) */}
+              <View
+                style={[
+                  styles.blobFrame,
+                  cfg.blobBorderRadius,
+                  {
+                    backgroundColor: 'transparent',
+                    borderColor: isSelected ? borderColor : 'transparent',
+                    borderWidth: isSelected ? 2.5 : 0,
+                  },
+                  isSelected && styles.blobFrameSelected,
+                ]}
+              >
+                {/* Illustration Image */}
+                <Image
+                  source={cfg.image}
+                  style={[
+                    styles.blobIllustration,
+                    { transform: [{ scale: cfg.imageScale || 1.15 }] },
+                  ]}
+                  resizeMode="contain"
+                />
+              </View>
+
+              {/* Labels: Pleasant indicator and Energy */}
+              <View style={styles.blobLabelsContainer}>
+                <AppText
+                  variant="label"
+                  bold
+                  color={pleasantColor}
+                  style={styles.blobPleasantText}
+                >
+                  {cfg.pleasantText}
+                </AppText>
+                <AppText
+                  variant="heading2"
+                  color="primary"
+                  style={styles.blobEnergyText}
+                >
+                  {cfg.energyText}
+                </AppText>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+
+  const renderStep2EmotionPicker = () => (
+    <View style={styles.step2Container}>
+      {/* Sticky Top Header Area: Question + Definition Card */}
+      <View style={[styles.step2Header, { backgroundColor: theme.background }]}>
+        <AppText variant="heading1" color="primary" style={[styles.mainQuestion, { marginBottom: 14 }]}>
+          Which word fits best?
+        </AppText>
+
+        {/* Definition Card stuck to top only when a word is selected */}
+        {primaryEmotion ? (
+          <View
+            style={[
+              styles.definitionCard,
+              {
+                backgroundColor: theme.surface,
+                shadowColor: theme.shadowColor,
+              },
+            ]}
+          >
+            <AppText variant="heading2" color="primary" style={styles.defEmotionTitle}>
+              {primaryEmotion}
+            </AppText>
+            <AppText variant="body" color="secondary" style={styles.defEmotionBody}>
+              {currentDefinition}
+            </AppText>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Scrollable Emotion Chips Grid */}
+      <ScrollView
+        style={styles.step2Scroll}
+        contentContainerStyle={styles.step2ScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.emotionGrid}>
+          {currentEmotionList.map((item) => (
+            <AppChip
+              key={item.id}
+              label={item.name}
+              selected={item.name === primaryEmotion}
+              quadrant={quadrant}
+              onPress={() => setPrimaryEmotion(item.name)}
+            />
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+
+  const renderStep3IntensityPicker = () => (
+    <View style={styles.stepContainer}>
+      <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
+        How intense is this feeling?
+      </AppText>
+
+      <View style={styles.intensityPillsContainer}>
+        {INTENSITY_ROWS.map((row, rowIdx) => (
+          <View key={`intensity-row-${rowIdx}`} style={styles.intensityPillsRow}>
+            {row.map((num) => {
+              const isSelected = intensity === num;
+              return (
+                <TouchableOpacity
+                  key={`int-${num}`}
+                  activeOpacity={0.8}
+                  onPress={() => setIntensity(num)}
+                  style={[
+                    styles.intensityPillBtn,
+                    {
+                      backgroundColor: isSelected ? qToken.selectedChipBg : theme.surface,
+                      shadowColor: theme.shadowColor,
+                    },
+                  ]}
+                >
+                  <AppText
+                    variant="body"
+                    bold={isSelected}
+                    color={isSelected ? qToken.selectedChipText : theme.text}
+                    style={styles.intensityPillBtnText}
+                  >
+                    {num}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderStep4ContextPicker = () => (
+    <View style={styles.stepContainer}>
+      <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
+        What's contributing?
+      </AppText>
+
+      {/* People Section (Single select, dynamic quadrant color, no checkmark) */}
+      <AppText variant="caption" bold color="secondary" style={styles.sectionHeading}>
+        People
+      </AppText>
+      <View style={styles.contributingChipsRow}>
+        {PEOPLE_OPTIONS.map((item) => (
+          <AppChip
+            key={`person-${item.name}`}
+            label={item.name}
+            selected={selectedPerson === item.name}
+            quadrant={quadrant}
+            onPress={() => togglePerson(item.name)}
+            icon={
+              <MaterialIcons
+                name={item.icon}
+                size={18}
+                color={selectedPerson === item.name ? qToken.selectedIcon : theme.textSecondary}
+              />
+            }
+          />
+        ))}
+      </View>
+
+      {/* Place Section (Single select, dynamic quadrant color, no checkmark) */}
+      <AppText
+        variant="caption"
+        bold
+        color="secondary"
+        style={[styles.sectionHeading, { marginTop: 24 }]}
+      >
+        Place
+      </AppText>
+      <View style={styles.contributingChipsRow}>
+        {PLACE_OPTIONS.map((item) => (
+          <AppChip
+            key={`place-${item.name}`}
+            label={item.name}
+            selected={selectedPlace === item.name}
+            quadrant={quadrant}
+            onPress={() => togglePlace(item.name)}
+            icon={
+              <MaterialIcons
+                name={item.icon}
+                size={18}
+                color={selectedPlace === item.name ? qToken.selectedIcon : theme.textSecondary}
+              />
+            }
+          />
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderStep5ReflectionNote = () => (
+    <View style={styles.stepContainer}>
+      <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
+        What is causing this emotion?
+      </AppText>
+
+      <AppTextInput
+        inputStyle={styles.textareaInput}
+        placeholder="Write a reflection note..."
+        multiline
+        value={reflectionNote}
+        onChangeText={setReflectionNote}
+        textAlignVertical="top"
+        autoFocus
+      />
+    </View>
+  );
 
   return (
     <Modal
@@ -291,262 +587,18 @@ export const MicroCheckInModal: React.FC<Props> = ({
 
           {/* Step Content */}
           {currentStep === 2 ? (
-            <View style={styles.step2Container}>
-              {/* Sticky Top Header Area: Question + Definition Card */}
-              <View style={[styles.step2Header, { backgroundColor: theme.background }]}>
-                <AppText variant="heading1" color="primary" style={[styles.mainQuestion, { marginBottom: 14 }]}>
-                  Which word fits best?
-                </AppText>
-
-                {/* Definition Card stuck to top only when a word is selected */}
-                {primaryEmotion ? (
-                  <View
-                    style={[
-                      styles.definitionCard,
-                      {
-                        backgroundColor: theme.surface,
-                        shadowColor: theme.shadowColor,
-                      },
-                    ]}
-                  >
-                    <AppText variant="heading2" color="primary" style={styles.defEmotionTitle}>
-                      {primaryEmotion}
-                    </AppText>
-                    <AppText variant="body" color="secondary" style={styles.defEmotionBody}>
-                      {currentDefinition}
-                    </AppText>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* Scrollable Emotion Chips Grid */}
-              <ScrollView
-                style={styles.step2Scroll}
-                contentContainerStyle={styles.step2ScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.emotionGrid}>
-                  {currentEmotionList.map((item) => (
-                    <AppChip
-                      key={item.id}
-                      label={item.name}
-                      selected={item.name === primaryEmotion}
-                      quadrant={quadrant}
-                      onPress={() => setPrimaryEmotion(item.name)}
-                    />
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
+            renderStep2EmotionPicker()
           ) : (
             <ScrollView
               style={styles.scroll}
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
-              {/* STEP 1: Mood Meter (Screen 2) */}
-              {currentStep === 1 && (
-                <View style={styles.stepContainer}>
-                  <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
-                    How are you feeling right now?
-                  </AppText>
-
-                  <View style={styles.quadrantGrid}>
-                    {QUADRANT_CONFIGS.map((cfg) => {
-                      const isSelected = quadrant === cfg.key;
-                      const borderColor = theme.quadrants[cfg.key].color;
-                      const pleasantColor = theme.quadrants[cfg.key].textColor;
-
-                      return (
-                        <TouchableOpacity
-                          key={cfg.key}
-                          activeOpacity={0.88}
-                          onPress={() => {
-                            handlePickQuadrant(cfg.key);
-                          }}
-                          style={styles.blobCardWrapper}
-                        >
-                          {/* Illustration Frame Container (Blob background removed) */}
-                          <View
-                            style={[
-                              styles.blobFrame,
-                              cfg.blobBorderRadius,
-                              {
-                                backgroundColor: 'transparent',
-                                borderColor: isSelected ? borderColor : 'transparent',
-                                borderWidth: isSelected ? 2.5 : 0,
-                              },
-                              isSelected && styles.blobFrameSelected,
-                            ]}
-                          >
-                            {/* Illustration Image */}
-                            <Image
-                              source={cfg.image}
-                              style={[
-                                styles.blobIllustration,
-                                { transform: [{ scale: cfg.imageScale || 1.15 }] },
-                              ]}
-                              resizeMode="contain"
-                            />
-                          </View>
-
-                          {/* Labels: Pleasant indicator and Energy */}
-                          <View style={styles.blobLabelsContainer}>
-                            <AppText
-                              variant="label"
-                              bold
-                              color={pleasantColor}
-                              style={styles.blobPleasantText}
-                            >
-                              {cfg.pleasantText}
-                            </AppText>
-                            <AppText
-                              variant="heading2"
-                              color="primary"
-                              style={styles.blobEnergyText}
-                            >
-                              {cfg.energyText}
-                            </AppText>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-
-            {/* STEP 3: Emotion Intensity */}
-            {currentStep === 3 && (
-              <View style={styles.stepContainer}>
-                <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
-                  How intense is this feeling?
-                </AppText>
-
-                <View style={styles.intensityPillsContainer}>
-                  {[[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]].map((row, rowIdx) => (
-                    <View key={`intensity-row-${rowIdx}`} style={styles.intensityPillsRow}>
-                      {row.map((num) => {
-                        const isSelected = intensity === num;
-                        return (
-                          <TouchableOpacity
-                            key={`int-${num}`}
-                            activeOpacity={0.8}
-                            onPress={() => setIntensity(num)}
-                            style={[
-                              styles.intensityPillBtn,
-                              {
-                                backgroundColor: isSelected ? qToken.selectedChipBg : theme.surface,
-                                shadowColor: theme.shadowColor,
-                              },
-                            ]}
-                          >
-                            <AppText
-                              variant="body"
-                              bold={isSelected}
-                              color={isSelected ? qToken.selectedChipText : theme.text}
-                              style={styles.intensityPillBtnText}
-                            >
-                              {num}
-                            </AppText>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* STEP 4: What's Contributing (Screen 5) */}
-            {currentStep === 4 && (
-              <View style={styles.stepContainer}>
-                <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
-                  What's contributing?
-                </AppText>
-
-                {/* People Section (Single select, dynamic quadrant color, no checkmark) */}
-                <AppText variant="caption" bold color="secondary" style={styles.sectionHeading}>
-                  People
-                </AppText>
-                <View style={styles.contributingChipsRow}>
-                  {PEOPLE_OPTIONS.map((item) => (
-                    <AppChip
-                      key={`person-${item.name}`}
-                      label={item.name}
-                      selected={selectedPerson === item.name}
-                      quadrant={quadrant}
-                      onPress={() => togglePerson(item.name)}
-                      icon={
-                        <MaterialIcons
-                          name={item.icon}
-                          size={18}
-                          color={selectedPerson === item.name ? qToken.selectedIcon : theme.textSecondary}
-                        />
-                      }
-                    />
-                  ))}
-                </View>
-
-                {/* Place Section (Single select, dynamic quadrant color, no checkmark) */}
-                <AppText
-                  variant="caption"
-                  bold
-                  color="secondary"
-                  style={[styles.sectionHeading, { marginTop: 24 }]}
-                >
-                  Place
-                </AppText>
-                <View style={styles.contributingChipsRow}>
-                  {PLACE_OPTIONS.map((item) => (
-                    <AppChip
-                      key={`place-${item.name}`}
-                      label={item.name}
-                      selected={selectedPlace === item.name}
-                      quadrant={quadrant}
-                      onPress={() => togglePlace(item.name)}
-                      icon={
-                        <MaterialIcons
-                          name={item.icon}
-                          size={18}
-                          color={selectedPlace === item.name ? qToken.selectedIcon : theme.textSecondary}
-                        />
-                      }
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* STEP 5: Reflection Note (Screen 6) */}
-            {currentStep === 5 && (
-              <View style={styles.stepContainer}>
-                <AppText variant="heading1" color="primary" style={styles.mainQuestion}>
-                  What is causing this emotion?
-                </AppText>
-
-                <View
-                  style={[
-                    styles.textareaCard,
-                    {
-                      backgroundColor: theme.inputBg,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <TextInput
-                    style={[styles.textareaInput, { color: theme.text }]}
-                    placeholder="Write a reflection note..."
-                    placeholderTextColor={theme.textMuted}
-                    multiline
-                    value={reflectionNote}
-                    onChangeText={setReflectionNote}
-                    textAlignVertical="top"
-                    autoFocus
-                  />
-                </View>
-              </View>
-            )}
-          </ScrollView>
+              {currentStep === 1 && renderStep1QuadrantPicker()}
+              {currentStep === 3 && renderStep3IntensityPicker()}
+              {currentStep === 4 && renderStep4ContextPicker()}
+              {currentStep === 5 && renderStep5ReflectionNote()}
+            </ScrollView>
           )}
 
           {/* Bottom Fixed Action Button using AppButton */}
@@ -691,19 +743,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
-  textareaCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
-    minHeight: 260,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
   textareaInput: {
+    borderRadius: 20,
+    padding: 18,
     fontSize: 16,
     fontFamily: fonts.regular,
     lineHeight: 24,
-    minHeight: 220,
+    minHeight: 260,
   },
   bottomBar: {
     position: 'absolute',

@@ -28,11 +28,23 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
+export function formatCardTime(timestamp: number): string {
+  const dateObj = new Date(timestamp);
+  return dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+export function resolveCardNote(checkIn: Pick<CheckIn, 'triggerNote' | 'urgeNote'>): string {
+  return checkIn.triggerNote || checkIn.urgeNote || '';
+}
+
+export function resolveQuadrantHeadshot(quadrant: QuadrantType): any {
+  return QUADRANT_HEADSHOTS[quadrant] || QUADRANT_HEADSHOTS.green;
+}
+
 export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => {
   const { theme } = useAppTheme();
 
-  const dateObj = new Date(checkIn.timestamp);
-  const timeFormatted = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const timeFormatted = formatCardTime(checkIn.timestamp);
 
   const translateX = useRef(new Animated.Value(0)).current;
   const isSwiping = useRef(false);
@@ -96,7 +108,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
     extrapolate: 'clamp',
   });
 
-  const noteContent = checkIn.triggerNote || checkIn.urgeNote || '';
+  const noteContent = resolveCardNote(checkIn);
 
   return (
     <View style={styles.swipeWrapper}>
@@ -141,7 +153,7 @@ export const TimelineCard: React.FC<Props> = ({ checkIn, onEdit, onDelete }) => 
             </View>
 
             <Image
-              source={QUADRANT_HEADSHOTS[checkIn.quadrant] || QUADRANT_HEADSHOTS.green}
+              source={resolveQuadrantHeadshot(checkIn.quadrant)}
               style={styles.rightIllustration}
               resizeMode="contain"
             />
