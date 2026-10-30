@@ -10,9 +10,9 @@
 ## Phase Status
 | Phase | Skill | Status | Artifact | Date |
 |---|---|---|---|---|
-| 1 — Build the safety net | working-with-legacy-code | done | TESTING.md + TECH-DEBT.md (GATE) | 2026-10-01 |
-| 2 — Make the code readable | clean-code | done | TECH-DEBT.md | 2026-10-02 |
-| 3 — Apply named refactorings | refactoring-patterns | done | TECH-DEBT.md | 2026-10-02 |
+| 1 — Build the safety net | working-with-legacy-code | done | TESTING.md + TECH-DEBT.md (GATE) | 2026-10-30 |
+| 2 — Make the code readable | clean-code | done | TECH-DEBT.md | 2026-10-30 |
+| 3 — Apply named refactorings | refactoring-patterns | done | TECH-DEBT.md | 2026-10-30 |
 | 4 — Reduce complexity | software-design-philosophy | done | TECH-DEBT.md | 2026-10-02 |
 | 5 — Draw the architecture boundary | clean-architecture | done | ARCHITECTURE.md | 2026-10-02 |
 | 6 — Lock in the habits | pragmatic-programmer | done | TECH-DEBT.md | 2026-10-02 |
@@ -39,6 +39,11 @@ Statuses: pending · in-progress · awaiting-evidence · done · deferred: <reas
 | 2026-10-02 | Phase 6 | Establish 15-20% debt budget and broken-windows policy in `docs/TECH-DEBT.md` | Prevents codebase decay by requiring all quirks to be tracked and reserving continuous maintenance capacity. |
 | 2026-10-02 | Phase 7 | Create `docs/RELIABILITY.md` auditing SQLite WAL, cache cleanup, and share fallbacks | Hardens device resilience under low-storage, locked-file, and offline scenarios. |
 | 2026-10-02 | Phase 9 | Document SQLite WAL mode snapshot isolation & single-writer concurrency in `docs/ARCHITECTURE.md` | Guarantees zero write-skew risk and durable single-source-of-truth storage. |
+| 2026-10-30 | Phase 1 (Pass 2) | Expand safety net to all 3 UI/state modules (`MicroCheckInModal`, `App`, `TimelineCard`) via pure logic seams | Locks in wizard rules, calendar math, dominant mood dots, and card display logic with zero new dependencies and instant Node Jest tests. |
+| 2026-10-30 | Phase 1 (Pass 2) | Pin any discovered UI/state quirks and log to `docs/TECH-DEBT.md` before changing behavior | Ensures product behavior never changes silently without PM review. |
+| 2026-10-30 | Phase 2 (Pass 2) | Fix daily mood dot tie-breaker to use most recent entry (`entries[0]`) and replace UI magic numbers with named constants | Makes calendar mood dots intuitive on tied days and eliminates magic numbers across `MicroCheckInModal.tsx` and `App.tsx`. |
+| 2026-10-30 | Phase 2 (Pass 2) | Keep "Add entry always logs to Today and jumps calendar to Today" behavior | Confirmed by PM as intentional real-time check-in behavior ("How are you feeling right now?"). |
+| 2026-10-30 | Phase 3 (Pass 2) | Extract 5 step render helpers and replace raw `TextInput` with `AppTextInput` in `MicroCheckInModal.tsx` | Decomposes a 300-line JSX block into readable step sections and enforces token-locked UI primitive rules. |
 
 ## Next Actions
 - [x] Set up Jest test harness for TypeScript (Antigravity, 2026-10-01)
@@ -51,3 +56,6 @@ Statuses: pending · in-progress · awaiting-evidence · done · deferred: <reas
 - [x] Sweep for untracked TODOs and formalize quality policies (Antigravity, 2026-10-02)
 - [x] Audit device reliability, fallbacks, and storage hygiene in `docs/RELIABILITY.md` (Antigravity, 2026-10-02)
 - [x] Complete Phase 9 data layer concurrency audit and finalize tracker (Antigravity, 2026-10-02)
+- [x] Expand Phase 1 safety net to `MicroCheckInModal.tsx`, `TimelineCard.tsx`, and `App.tsx` (Antigravity, 2026-10-30)
+- [x] Complete Phase 2 UI readability pass & daily mood dot tie-breaker fix (Antigravity, 2026-10-30)
+- [x] Complete Phase 3 named refactorings on `MicroCheckInModal.tsx` and update CI Gates (Antigravity, 2026-10-30)
