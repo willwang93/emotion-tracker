@@ -280,6 +280,41 @@ export async function getAllCheckIns(): Promise<CheckIn[]> {
   });
 }
 
+export interface AvailableMonth {
+  year: number;
+  monthIndex: number; // 0 = January ... 11 = December
+  count: number;
+}
+
+export function computeAvailableMonthsFromTimestamps(timestamps: number[]): AvailableMonth[] {
+  const map = new Map<string, AvailableMonth>();
+  for (const ts of timestamps) {
+    const d = new Date(Number(ts));
+    const year = d.getFullYear();
+    const monthIndex = d.getMonth();
+    if (Number.isNaN(year) || Number.isNaN(monthIndex)) continue;
+    const key = `${year}-${monthIndex}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      map.set(key, { year, monthIndex, count: 1 });
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => b.year * 12 + b.monthIndex - (a.year * 12 + a.monthIndex)
+  );
+}
+
+export async function getAvailableMonths(): Promise<AvailableMonth[]> {
+  return withDb(async (db) => {
+    const rows = await db.getAllAsync<{ timestamp: number }>(
+      `SELECT timestamp FROM check_ins ORDER BY timestamp DESC;`
+    );
+    return computeAvailableMonthsFromTimestamps(rows.map((r) => Number(r.timestamp)));
+  });
+}
+
 export async function getCheckInsForMonth(year: number, monthIndex: number): Promise<CheckIn[]> {
   const startDate = new Date(year, monthIndex, 1);
   const endDate = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);

@@ -8,6 +8,8 @@ import {
   getCheckInsForDateRange,
   getAllCheckIns,
   getCheckInsForMonth,
+  computeAvailableMonthsFromTimestamps,
+  getAvailableMonths,
   deleteCheckIn,
 } from '../db';
 import { CheckIn } from '../../types';
@@ -259,6 +261,43 @@ describe('Database Service — Characterization Tests', () => {
       const [sql, params] = mockRunAsync.mock.calls[0];
       expect(sql).toContain('DELETE FROM check_ins WHERE id = ?');
       expect(params).toEqual(['to-delete-999']);
+    });
+
+    it('computeAvailableMonthsFromTimestamps groups by month, aggregates counts, and sorts newest first', () => {
+      const timestamps = [
+        new Date(2026, 7, 10, 9, 0).getTime(),  // Aug 2026
+        new Date(2026, 10, 1, 8, 0).getTime(),  // Nov 2026
+        new Date(2026, 7, 25, 19, 0).getTime(), // Aug 2026
+        new Date(2026, 9, 15, 12, 0).getTime(), // Oct 2026
+        new Date(2026, 10, 12, 21, 0).getTime(), // Nov 2026
+        new Date(2026, 10, 13, 8, 30).getTime(), // Nov 2026
+      ];
+
+      const result = computeAvailableMonthsFromTimestamps(timestamps);
+
+      expect(result).toEqual([
+        { year: 2026, monthIndex: 10, count: 3 },
+        { year: 2026, monthIndex: 9, count: 1 },
+        { year: 2026, monthIndex: 7, count: 2 },
+      ]);
+    });
+
+    it('getAvailableMonths queries timestamps and returns grouped AvailableMonth[]', async () => {
+      mockGetAllAsync.mockResolvedValueOnce([
+        { timestamp: new Date(2026, 10, 5, 10, 0).getTime() },
+        { timestamp: new Date(2026, 10, 2, 14, 0).getTime() },
+        { timestamp: new Date(2026, 8, 20, 9, 0).getTime() },
+      ]);
+
+      const result = await getAvailableMonths();
+
+      expect(mockGetAllAsync).toHaveBeenCalledTimes(1);
+      const [sql] = mockGetAllAsync.mock.calls[0];
+      expect(sql).toContain('SELECT timestamp FROM check_ins ORDER BY timestamp DESC');
+      expect(result).toEqual([
+        { year: 2026, monthIndex: 10, count: 2 },
+        { year: 2026, monthIndex: 8, count: 1 },
+      ]);
     });
   });
 });

@@ -5,64 +5,105 @@ import { useAppTheme } from '../theme/ThemeContext';
 import { AppText } from './ui/AppText';
 import { AppButton } from './ui/AppButton';
 import { AppChip } from './ui/AppChip';
-import { AppCard } from './ui/AppCard';
 import { AppModalLayout } from './ui/AppModalLayout';
-import { getCheckInsForMonth, getAllCheckIns } from '../services/db';
+import {
+  AvailableMonth,
+  getAvailableMonths,
+  getCheckInsForMonth,
+} from '../services/db';
 import { formatCheckInsToMarkdown, exportMarkdownFile } from '../services/export';
-import { CheckIn } from '../types';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
 }
 
-type ExportScope = 'september_2026' | 'all_time';
+export const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+export function formatMonthChipLabel(month: AvailableMonth): string {
+  return `${MONTH_NAMES[month.monthIndex]} ${month.year} (${month.count})`;
+}
+
+export function getMonthExportFilename(year: number, monthIndex: number): string {
+  return `${MONTH_NAMES[monthIndex]}-${year}-Emotion-Entries.md`;
+}
+
+export function getMonthExportTitle(year: number, monthIndex: number): string {
+  return `Emotion Entries — ${MONTH_NAMES[monthIndex]} ${year}`;
+}
 
 export const ExportModal: React.FC<Props> = ({ visible, onClose }) => {
   const { theme } = useAppTheme();
-  const [scope, setScope] = useState<ExportScope>('september_2026');
-  const [entries, setEntries] = useState<CheckIn[]>([]);
+  const [availableMonths, setAvailableMonths] = useState<AvailableMonth[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<{
+    year: number;
+    monthIndex: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportSuccess, setExportSuccess] = useState<boolean>(false);
 
-  const loadEntries = useCallback(async () => {
+  const loadAvailableMonths = useCallback(async () => {
     setIsLoading(true);
     setExportSuccess(false);
     try {
-      if (scope === 'september_2026') {
-        // Month index 8 is September (0-indexed)
-        const data = await getCheckInsForMonth(2026, 8);
-        setEntries(data);
+      const months = await getAvailableMonths();
+      setAvailableMonths(months);
+      if (months.length > 0) {
+        setSelectedMonth({
+          year: months[0].year,
+          monthIndex: months[0].monthIndex,
+        });
       } else {
-        const data = await getAllCheckIns();
-        setEntries(data);
+        setSelectedMonth(null);
       }
     } catch (err) {
-      console.error('Failed to load entries for export:', err);
+      console.error('Failed to load available months for export:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [scope]);
+  }, []);
 
   useEffect(() => {
     if (visible) {
-      loadEntries();
+      loadAvailableMonths();
     }
-  }, [visible, loadEntries]);
+  }, [visible, loadAvailableMonths]);
+
+  const handleSelectMonth = (month: AvailableMonth) => {
+    setSelectedMonth({ year: month.year, monthIndex: month.monthIndex });
+    setExportSuccess(false);
+  };
 
   const handleExport = async () => {
+    if (!selectedMonth) return;
     setIsExporting(true);
     try {
-      const filename =
-        scope === 'september_2026'
-          ? 'September-2026-Emotion-Entries.md'
-          : 'Emotion-Entries-All-Time.md';
-
-      const title =
-        scope === 'september_2026'
-          ? 'Emotion Entries — September 2026'
-          : 'Emotion Entries — Complete Archive';
+      const entries = await getCheckInsForMonth(
+        selectedMonth.year,
+        selectedMonth.monthIndex
+      );
+      const filename = getMonthExportFilename(
+        selectedMonth.year,
+        selectedMonth.monthIndex
+      );
+      const title = getMonthExportTitle(
+        selectedMonth.year,
+        selectedMonth.monthIndex
+      );
 
       const markdown = formatCheckInsToMarkdown(entries, title);
       await exportMarkdownFile(markdown, filename);
@@ -95,7 +136,7 @@ export const ExportModal: React.FC<Props> = ({ visible, onClose }) => {
                   : 'Export Markdown File'
               }
               variant="primary"
-              disabled={isLoading || isExporting || entries.length === 0}
+              disabled={isLoading || isExporting || !selectedMonth}
               icon={
                 isExporting ? (
                   <ActivityIndicator size="small" color={theme.btnPrimaryText} />
@@ -111,43 +152,35 @@ export const ExportModal: React.FC<Props> = ({ visible, onClose }) => {
       >
         <View style={styles.content}>
           <AppText variant="heading2" color="primary" style={styles.sectionHeader}>
-            Export Range
+            Select Month
           </AppText>
-          <View style={styles.chipsRow}>
-            <AppChip
-              label="September 2026"
-              selected={scope === 'september_2026'}
-              onPress={() => setScope('september_2026')}
-            />
-            <AppChip
-              label="All Time"
-              selected={scope === 'all_time'}
-              onPress={() => setScope('all_time')}
-            />
-          </View>
 
-          <AppCard style={styles.summaryCard}>
-            <AppText variant="caption" bold color="muted" style={styles.summaryKicker}>
-              PREVIEW
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.btnPrimaryBg} style={styles.loader} />
+          ) : availableMonths.length === 0 ? (
+            <AppText variant="body" color="muted">
+              No entries recorded yet.
             </AppText>
-            {isLoading ? (
-              <ActivityIndicator size="small" color={theme.btnPrimaryBg} style={styles.loader} />
-            ) : (
-              <>
-                <AppText variant="heading1" color="primary" style={styles.countText}>
-                  {entries.length}
-                </AppText>
-                <AppText variant="body" color="secondary">
-                  {entries.length === 1 ? 'entry ready to export' : 'entries ready to export'}
-                </AppText>
-                <AppText variant="caption" color="muted" style={styles.formatDescription}>
-                  Formatted in semantic Markdown optimized for LLM reading, daily journals, and analysis.
-                </AppText>
-              </>
-            )}
-          </AppCard>
+          ) : (
+            <View style={styles.chipsRow}>
+              {availableMonths.map((month) => {
+                const isSelected =
+                  selectedMonth?.year === month.year &&
+                  selectedMonth?.monthIndex === month.monthIndex;
 
-          {exportSuccess && (
+                return (
+                  <AppChip
+                    key={`${month.year}-${month.monthIndex}`}
+                    label={formatMonthChipLabel(month)}
+                    selected={isSelected}
+                    onPress={() => handleSelectMonth(month)}
+                  />
+                );
+              })}
+            </View>
+          )}
+
+          {exportSuccess && selectedMonth && (
             <View
               style={[
                 styles.successNotice,
@@ -156,7 +189,7 @@ export const ExportModal: React.FC<Props> = ({ visible, onClose }) => {
             >
               <MaterialIcons name="check-circle" size={20} color={theme.quadrants.green.color} />
               <AppText variant="caption" color="primary" style={styles.successText}>
-                Export created and shared!
+                Exported {getMonthExportFilename(selectedMonth.year, selectedMonth.monthIndex)}!
               </AppText>
             </View>
           )}
@@ -175,31 +208,13 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginBottom: 4,
   },
+  loader: {
+    paddingVertical: 16,
+  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  summaryCard: {
-    marginTop: 8,
-    padding: 20,
-    borderRadius: 16,
-  },
-  summaryKicker: {
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
-  loader: {
-    paddingVertical: 16,
-  },
-  countText: {
-    fontSize: 40,
-    lineHeight: 48,
-    marginBottom: 4,
-  },
-  formatDescription: {
-    marginTop: 12,
-    lineHeight: 18,
   },
   successNotice: {
     flexDirection: 'row',
